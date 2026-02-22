@@ -26,6 +26,26 @@ local stats = {
 -- Erster gesehener Zeitstempel pro IP (für Dossier) / First-seen timestamp per IP
 local firstSeenAt = {}
 
+-- Temporäre Konsolen-Grants (gesetzt via kw_openfor Konsolenbefehl)
+-- Temporary console grants (set via kw_openfor console command)
+local _consoleGrants = {}  -- { [playerSrc] = expiryGameTimer }
+
+-- Prüft ob ein Spieler das Dashboard verwenden darf
+-- Checks if a player is allowed to use the dashboard
+local function canAccessDashboard(src)
+    local n = tonumber(src)
+    if not n or n <= 0 then return false end
+    -- 1. Permanenter Owner-Check / Permanent owner check
+    if AntiTheft.isOwner(n) then return true end
+    -- 2. Temporärer Konsolen-Grant (60s) / Temporary console grant (60s)
+    local exp = _consoleGrants[n]
+    if exp then
+        if GetGameTimer() <= exp then return true end
+        _consoleGrants[n] = nil  -- abgelaufen / expired
+    end
+    return false
+end
+
 -- Zentrale Referenz-ID-Funktion / Central reference ID function
 local function makeRefID(ip, suffix)
     local clean = ip:gsub("%.", ""):sub(1, 8)
@@ -781,7 +801,7 @@ end)
 RegisterNetEvent("kriegswabwehr:checkOwner")
 AddEventHandler("kriegswabwehr:checkOwner", function()
     local src = source
-    if AntiTheft.isOwner(src) then
+    if canAccessDashboard(src) then
         TriggerClientEvent("kriegswabwehr:ownerGranted", src)
     end
     -- Kein Feedback an Nicht-Owner / no feedback to non-owners
@@ -794,7 +814,7 @@ end)
 RegisterNetEvent("kriegswabwehr:requestStats")
 AddEventHandler("kriegswabwehr:requestStats", function()
     local src = source
-    if not AntiTheft.isOwner(src) then
+    if not canAccessDashboard(src) then
         -- Gib Fehlerstatus zurück damit NUI "Kein Zugriff" anzeigen kann
         -- Send error status so NUI can display "No access"
         TriggerClientEvent("kriegswabwehr:statsResponse", src, { _notAdmin = true })
@@ -889,7 +909,7 @@ end)
 RegisterNetEvent("kriegswabwehr:getBanList")
 AddEventHandler("kriegswabwehr:getBanList", function()
     local src = source
-    if not AntiTheft.isOwner(src) then return end
+    if not canAccessDashboard(src) then return end
     TriggerClientEvent("kriegswabwehr:banListResponse", src, {
         bans    = IPBlocker.getBanList(),
         subnets = IPBlocker.getSubnetList(),
@@ -899,7 +919,7 @@ end)
 RegisterNetEvent("kriegswabwehr:unbanIP")
 AddEventHandler("kriegswabwehr:unbanIP", function(ip)
     local src = source
-    if not AntiTheft.isOwner(src) then return end
+    if not canAccessDashboard(src) then return end
     local success = IPBlocker.unban(ip)
     Logger.adminAction(src, "UNBAN", ip, success and "Erfolgreich" or "IP nicht gefunden")
     TriggerClientEvent("kriegswabwehr:unbanResult", src, { success = success, ip = ip })
@@ -912,7 +932,7 @@ end)
 RegisterNetEvent("kriegswabwehr:getWhitelist")
 AddEventHandler("kriegswabwehr:getWhitelist", function()
     local src = source
-    if not AntiTheft.isOwner(src) then return end
+    if not canAccessDashboard(src) then return end
     local entries = {}
     for id, data in pairs(Whitelist.list()) do
         table.insert(entries, {
@@ -929,7 +949,7 @@ end)
 RegisterNetEvent("kriegswabwehr:addWhitelist")
 AddEventHandler("kriegswabwehr:addWhitelist", function(data)
     local src = source
-    if not AntiTheft.isOwner(src) then return end
+    if not canAccessDashboard(src) then return end
     if not data or not data.identifier then return end
     local ok, msg = Whitelist.add(data.identifier, "admin:" .. tostring(src), data.note or "")
     Logger.adminAction(src, "WHITELIST_ADD", data.identifier, ok and "OK" or msg)
@@ -944,7 +964,7 @@ end)
 RegisterNetEvent("kriegswabwehr:removeWhitelist")
 AddEventHandler("kriegswabwehr:removeWhitelist", function(data)
     local src = source
-    if not AntiTheft.isOwner(src) then return end
+    if not canAccessDashboard(src) then return end
     if not data or not data.identifier then return end
     local ok, msg = Whitelist.remove(data.identifier)
     Logger.adminAction(src, "WHITELIST_REMOVE", data.identifier, ok and "OK" or msg)
@@ -963,7 +983,7 @@ end)
 RegisterNetEvent("kriegswabwehr:banPlayer")
 AddEventHandler("kriegswabwehr:banPlayer", function(data)
     local src = source
-    if not AntiTheft.isOwner(src) then return end
+    if not canAccessDashboard(src) then return end
     if not data or not data.targetSrc then return end
     local tSrc = tonumber(data.targetSrc)
     if not tSrc then return end
@@ -1008,7 +1028,7 @@ end)
 RegisterNetEvent("kriegswabwehr:whitelistPlayer")
 AddEventHandler("kriegswabwehr:whitelistPlayer", function(data)
     local src = source
-    if not AntiTheft.isOwner(src) then return end
+    if not canAccessDashboard(src) then return end
     if not data or not data.targetSrc then return end
     local tSrc  = tonumber(data.targetSrc)
     if not tSrc then return end
@@ -1078,20 +1098,77 @@ end)
 -- Admin-Befehl / Admin command
 -- ─────────────────────────────────────────────────────────────────────────────
 
+-- Server-seitiger /kwdashboard-Handler (stumm für Nicht-Owner, kein Feedback-Leak)
+-- Server-side /kwdashboard handler (silent for non-owners, no feedback leak)
 RegisterCommand("kwdashboard", function(src, args, raw)
-    if src == 0 then
-        Logger.info("Dashboard-Befehl von Serverkonsole")
-        return
-    end
-    if not AntiTheft.isOwner(src) then
-        TriggerClientEvent("chat:addMessage", src, {
-            color = {255, 50, 50},
-            args  = {"[KW]", "Keine Berechtigung / No permission."},
-        })
-        return
-    end
-    TriggerClientEvent("kriegswabwehr:openDashboard", src)
+    if src == 0 then return end  -- Konsole: kw_openfor benutzen / Console: use kw_openfor
+    -- Spieler-Anfragen werden über checkOwner-Event behandelt (client/main.lua)
+    -- Player requests handled via checkOwner event (client/main.lua)
+    -- Keine Fehlermeldung – kein Spieler soll wissen dass es diesen Befehl gibt
+    -- No error message – no player should know this command exists
 end, false)
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- kw_openfor [Spieler-ID] – Dashboard für Spieler öffnen (nur Serverkonsole)
+-- kw_openfor [playerID]   – Open dashboard for player (server console only)
+--
+-- BOOTSTRAP-BEFEHL: Tippe dies in die txAdmin-Konsole wenn du selbst auf dem
+-- Server bist um das Dashboard zu öffnen und deine Identifiers zu sehen.
+-- BOOTSTRAP COMMAND: Type this in the txAdmin console while you are on the
+-- server to open the dashboard and see your identifiers.
+--
+-- Verwendung / Usage:
+--   kw_openfor        -- zeigt verbundene Spieler / shows connected players
+--   kw_openfor 1      -- öffnet Dashboard für Spieler #1 (60 Sekunden)
+-- ─────────────────────────────────────────────────────────────────────────────
+RegisterCommand("kw_openfor", function(src, args, raw)
+    if src ~= 0 then return end  -- nur Serverkonsole / server console only
+
+    local targetSrc = tonumber(args[1])
+    if not targetSrc then
+        print("╔══════════════════════════════════════════════════╗")
+        print("║  kw_openfor – Kriegswabwehr Bootstrap           ║")
+        print("╠══════════════════════════════════════════════════╣")
+        print("║  Verwendung: kw_openfor [Spieler-ID]            ║")
+        print("║  Öffnet Dashboard für 60 Sekunden               ║")
+        print("╠══════════════════════════════════════════════════╣")
+        print("║  Verbundene Spieler / Connected players:        ║")
+        for _, pidStr in ipairs(GetPlayers()) do
+            local pid = tonumber(pidStr)
+            print(string.format("║    ID=%-4s  %s", pidStr, GetPlayerName(pid) or "?"))
+        end
+        print("╚══════════════════════════════════════════════════╝")
+        return
+    end
+
+    local name = GetPlayerName(targetSrc)
+    if not name then
+        print("[kw_openfor] Spieler " .. targetSrc .. " nicht verbunden / not connected")
+        return
+    end
+
+    -- Temporären Grant setzen (60 Sekunden) / Set temporary grant (60 seconds)
+    _consoleGrants[targetSrc] = GetGameTimer() + 60000
+
+    -- Identifiers ausgeben / Print identifiers
+    local ids = GetPlayerIdentifiers(targetSrc) or {}
+    local ep  = GetPlayerEndpoint(tostring(targetSrc)) or "?"
+    print("╔══════════════════════════════════════════════════════════════╗")
+    print(string.format("║  Dashboard geöffnet für: %-36s║", name .. " (ID=" .. targetSrc .. ")"))
+    print(string.format("║  IP-Adresse: %-48s║", ep))
+    print("╠══════════════════════════════════════════════════════════════╣")
+    print("║  Identifiers (in Config.OwnerIdentifiers eintragen):        ║")
+    for _, id in ipairs(ids) do
+        print(string.format('║    "%-56s", ║', id))
+    end
+    print("╠══════════════════════════════════════════════════════════════╣")
+    print("║  Dashboard ist für 60 Sekunden geöffnet.                    ║")
+    print("║  Tippe /kwdashboard im Spiel!                               ║")
+    print("╚══════════════════════════════════════════════════════════════╝")
+
+    -- Dashboard sofort öffnen / Open dashboard immediately
+    TriggerClientEvent("kriegswabwehr:ownerGranted", targetSrc)
+end, true)
 
 -- Diagnose-Befehl (Serverkonsole) / Diagnostic command (server console only)
 -- Verwendung / Usage: kw_diagadmin [Spieler-ID]
@@ -1112,7 +1189,7 @@ RegisterCommand("kw_diagadmin", function(src, args, raw)
     print(string.format("[KW DIAG] Spieler %d (%s) IP=%s", targetSrc, GetPlayerName(targetSrc) or "?", ep))
     print("[KW DIAG] Identifiers:")
     for _, id in ipairs(ids) do print("  " .. id) end
-    print("[KW DIAG] Admin-Check:")
+    print("[KW DIAG] ACE-Checks:")
     print("  group.admin      = " .. tostring(IsPlayerAceAllowed(tostring(targetSrc), "group.admin")))
     print("  group.superadmin = " .. tostring(IsPlayerAceAllowed(tostring(targetSrc), "group.superadmin")))
     print("  command.ban      = " .. tostring(IsPlayerAceAllowed(tostring(targetSrc), "command.ban")))
@@ -1120,7 +1197,8 @@ RegisterCommand("kw_diagadmin", function(src, args, raw)
     print("  kw.admin         = " .. tostring(IsPlayerAceAllowed(tostring(targetSrc), "kriegswabwehr.admin")))
     print("  isOwner()        = " .. tostring(AntiTheft.isOwner(targetSrc)))
     if not AntiTheft.isOwner(targetSrc) then
-        print("[KW DIAG] LÖSUNG / FIX: Füge eine dieser Zeilen in Config.OwnerIdentifiers ein:")
+        print("[KW DIAG] >>> Tipp: kw_openfor " .. targetSrc .. " -- öffnet Dashboard sofort (60s)")
+        print("[KW DIAG] >>> Dann diese Zeilen in Config.OwnerIdentifiers eintragen:")
         for _, id in ipairs(ids) do
             if id:sub(1,8) == "license:" or id:sub(1,6) == "steam:" then
                 print('  "' .. id .. '",')
@@ -1136,7 +1214,7 @@ end, true)
 RegisterNetEvent("kriegswabwehr:getLogDates")
 AddEventHandler("kriegswabwehr:getLogDates", function()
     local src = source
-    if not AntiTheft.isOwner(src) then return end
+    if not canAccessDashboard(src) then return end
     TriggerClientEvent("kriegswabwehr:logDatesResponse", src, {
         dates = Logger.getLogDates()
     })
@@ -1145,7 +1223,7 @@ end)
 RegisterNetEvent("kriegswabwehr:getLogByDate")
 AddEventHandler("kriegswabwehr:getLogByDate", function(data)
     local src = source
-    if not AntiTheft.isOwner(src) then return end
+    if not canAccessDashboard(src) then return end
     local dateKey = data and data.key
     if not dateKey or not dateKey:match("^%d%d%d%d%d%d%d%d$") then return end
     TriggerClientEvent("kriegswabwehr:logByDateResponse", src, {
@@ -1157,7 +1235,7 @@ end)
 RegisterNetEvent("kriegswabwehr:extendLogRetention")
 AddEventHandler("kriegswabwehr:extendLogRetention", function(data)
     local src = source
-    if not AntiTheft.isOwner(src) then return end
+    if not canAccessDashboard(src) then return end
     local dateKey   = data and data.key
     local extraDays = (data and data.extraDays) or 5
     if not dateKey or not dateKey:match("^%d%d%d%d%d%d%d%d$") then return end
@@ -1175,7 +1253,7 @@ end)
 RegisterNetEvent("kriegswabwehr:exportLog")
 AddEventHandler("kriegswabwehr:exportLog", function(data)
     local src = source
-    if not AntiTheft.isOwner(src) then return end
+    if not canAccessDashboard(src) then return end
     local dateKey = data and data.key
     if not dateKey or not dateKey:match("^%d%d%d%d%d%d%d%d$") then return end
     Logger.adminAction(src, "EXPORT_LOG", dateKey, "Log-Export angefordert / Log export requested")
