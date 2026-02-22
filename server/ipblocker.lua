@@ -381,20 +381,6 @@ function IPBlocker.getSubnetList()
 end
 
 function IPBlocker.getStats()
-    local tempCount = 0
-    for _, data in pairs(tempBans) do
-        if os.time() < data.expiry then tempCount = tempCount + 1 end
-    end
-    return {
-        permBans       = 0,  -- wird unten gezählt
-        tempBans       = tempCount,
-        blockedSubnets = 0,
-        blockedCountries = #Config.GeoBlock,
-    }
-end
-
--- Zähle perm bans richtig / Count perm bans correctly
-function IPBlocker.getStats()
     local permCount   = 0
     local tempCount   = 0
     local subnetCount = 0

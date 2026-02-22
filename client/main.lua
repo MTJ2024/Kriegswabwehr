@@ -146,6 +146,22 @@ CreateThread(function()
     end
 end)
 
+-- NUI: Queue-Modus umschalten / Toggle queue mode
+RegisterNUICallback("setQueueMode", function(data, cb)
+    TriggerServerEvent("kriegswabwehr:setQueueMode", data)
+    cb({})
+end)
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- /kwdashboard – Chat-Befehl direkt im FiveM-Chat
+-- ─────────────────────────────────────────────────────────────────────────────
+
+RegisterCommand("kwdashboard", function()
+    TriggerEvent("kriegswabwehr:openDashboard")
+end, false)
+
+TriggerEvent("chat:addSuggestion", "/kwdashboard", "Kriegswabwehr Admin-Dashboard öffnen (nur Admins)")
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- ESC-Taste schließt Dashboard / ESC key closes dashboard
 -- ─────────────────────────────────────────────────────────────────────────────

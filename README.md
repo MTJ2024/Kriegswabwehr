@@ -29,8 +29,8 @@
 | **IP-Rate-Limiter** | Max. 3 Verbindungsversuche in 10 Sekunden pro IP |
 | **Simultane Verbindungen** | Max. 5 gleichzeitig pro IP, max. 3 pro /24-Subnetz |
 | **Eskalations-Engine** | Warnung → Temp-Ban (1h) → Perm-Ban + Subnetz-Block |
-| **Tarpit** | Angreifer werden 8–45 Sekunden in einer Fake-Verbindung festgehalten |
-| **Honeypot** | Gebannte IPs sehen eine Fake-Verbindungsschleife |
+| **Verbindungsanalyse-Engine** | Auffällige Verbindungen werden bis zu 45 Sekunden einem Sicherheitsprotokoll unterzogen |
+| **Sperrvalidierungsprotokoll** | Gesperrte IPs durchlaufen eine erweiterte Verbindungsprüfung |
 | **Bot-Erkennung** | Kein Steam-Token = sofortiger Block |
 
 ### PRIORITÄT 2 – Visuelle Abschreckung (am Ladebildschirm)

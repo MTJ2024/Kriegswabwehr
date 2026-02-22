@@ -270,4 +270,26 @@ RegisterNetEvent("kriegswabwehr:getQueue", function()
     })
 end)
 
+-- Queue-Modus ein/ausschalten (vom Dashboard-Toggle) / Toggle queue mode from dashboard
+local queueModeEnabled = (Config.WhitelistQueue and Config.WhitelistQueue.enabled) or false
+
+RegisterNetEvent("kriegswabwehr:setQueueMode", function(data)
+    local src = source
+    if not AntiTheft.isAdmin(src) then return end
+    queueModeEnabled = (data and data.enabled == true)
+    Logger.info(string.format(
+        "[QUEUE] Modus geaendert von Admin %s: %s",
+        tostring(src), queueModeEnabled and "AKTIV" or "INAKTIV"
+    ))
+    -- Config live aktualisieren / Update config live
+    if Config.WhitelistQueue then
+        Config.WhitelistQueue.enabled = queueModeEnabled
+    end
+    notifyAdmins({ type = "modeChange", enabled = queueModeEnabled })
+end)
+
+function WhitelistQueue.isEnabled()
+    return queueModeEnabled
+end
+
 Logger.info("WhitelistQueue aktiv / WhitelistQueue active")

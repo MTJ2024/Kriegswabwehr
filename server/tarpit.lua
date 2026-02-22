@@ -135,7 +135,7 @@ function Tarpit.getStats()
         total         = tarpitStats.total,
         currentActive = tarpitStats.currentActive,
         totalMsWasted = tarpitStats.totalMsWasted,
-        active        = activeTarpits,
+        active        = tarpitStats.currentActive,  -- Zahl fuer Dashboard-Kachel / number for dashboard tile
     }
 end
 

@@ -764,7 +764,7 @@ RegisterNetEvent("kriegswabwehr:requestStats", function()
         banStats          = IPBlocker.getStats(),
         rateLimitStats    = RateLimiter.getStats(),
         tarpitStats       = Tarpit.getStats(),
-        players           = GetNumPlayers(),
+        players           = #GetPlayers(),
         maxPlayers        = GetConvarInt("sv_maxclients", 32),
         pendingQueue      = WhitelistQueue.getAll(),
         whitelistCount    = (function()
