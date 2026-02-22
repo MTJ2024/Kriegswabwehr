@@ -14,19 +14,12 @@ local dashboardOpen = false
 -- Dashboard öffnen (lokal) / Open dashboard (local helper)
 -- ─────────────────────────────────────────────────────────────────────────────
 local function openDashboardLocal()
-    if dashboardOpen then
-        print("[KW DEBUG client] openDashboardLocal: Dashboard bereits offen / already open")
-        return
-    end
+    if dashboardOpen then return end
     dashboardOpen = true
-    print("[KW DEBUG client] openDashboardLocal: öffne Dashboard / opening dashboard")
     SetNuiFocus(true, true)
     SendNUIMessage({ type = "open" })
-    print("[KW DEBUG client] NUI Message 'open' gesendet / sent")
     TriggerServerEvent("kriegswabwehr:requestStats")
-    print("[KW DEBUG client] TriggerServerEvent requestStats gesendet / sent")
     TriggerServerEvent("kriegswabwehr:getBanList")
-    print("[KW DEBUG client] TriggerServerEvent getBanList gesendet / sent")
 end
 
 -- Vom Server geöffnet / Opened by server
@@ -41,20 +34,11 @@ end)
 
 RegisterNetEvent("kriegswabwehr:statsResponse")
 AddEventHandler("kriegswabwehr:statsResponse", function(data)
-    print(string.format("[KW DEBUG client] statsResponse empfangen / received | _notAdmin=%s _error=%s players=%s",
-        tostring(data and data._notAdmin),
-        tostring(data and data._error),
-        tostring(data and data.players)
-    ))
     SendNUIMessage({ type = "statsUpdate", data = data })
-    print("[KW DEBUG client] statsUpdate NUI Message gesendet / sent")
 end)
 
 RegisterNetEvent("kriegswabwehr:banListResponse")
 AddEventHandler("kriegswabwehr:banListResponse", function(data)
-    print(string.format("[KW DEBUG client] banListResponse empfangen / received | bans=%s",
-        tostring(data and data.bans and #data.bans or 0)
-    ))
     SendNUIMessage({ type = "banListUpdate", data = data })
 end)
 

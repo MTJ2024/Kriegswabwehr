@@ -554,7 +554,7 @@ function esc(str) {
 // ── Debug logger ──────────────────────────────────────────────────────────────
 // Sichtbares Debug-Panel im Dashboard – zeigt alle NUI-Nachrichten
 // Visible debug panel inside the dashboard – logs all NUI messages
-const KW_DEBUG = true;   // wird automatisch false wenn Config.Debug=false im Server
+const KW_DEBUG = false;
 let _debugCount = 0;
 
 function dbgLog(cls, text) {
