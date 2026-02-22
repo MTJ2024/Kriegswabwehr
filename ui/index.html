@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kriegswabwehr – Admin Dashboard</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <!-- Chart.js via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- HEADER                                                          -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="dashboard" class="hidden">
+
+  <div class="header">
+    <div class="header-left">
+      <span class="logo">🛡️ KRIEGSWABWEHR</span>
+      <span class="version">v1.0.0</span>
+    </div>
+    <div class="header-center">
+      <span id="server-name">FiveM Server</span>
+      <span class="dot" id="status-dot"></span>
+      <span id="status-text">AKTIV</span>
+    </div>
+    <div class="header-right">
+      <span id="clock"></span>
+      <button class="btn-close" onclick="closeDashboard()">✕</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- TOP-ROW: Live-Monitor-Kacheln / Live monitor tiles             -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <div class="tiles">
+    <div class="tile tile-red">
+      <div class="tile-icon">🔴</div>
+      <div class="tile-value" id="tile-attempts">0</div>
+      <div class="tile-label">Verbindungsversuche<br>Connection Attempts</div>
+    </div>
+    <div class="tile tile-orange">
+      <div class="tile-icon">🚫</div>
+      <div class="tile-value" id="tile-blocked">0</div>
+      <div class="tile-label">Geblockt/Minute<br>Blocked/Minute</div>
+    </div>
+    <div class="tile tile-green">
+      <div class="tile-icon">✅</div>
+      <div class="tile-value" id="tile-legit">0</div>
+      <div class="tile-label">Legitime Verbindungen<br>Legitimate Connections</div>
+    </div>
+    <div class="tile tile-blue">
+      <div class="tile-icon">👥</div>
+      <div class="tile-value" id="tile-players">0</div>
+      <div class="tile-label">Online Spieler<br>Online Players</div>
+    </div>
+    <div class="tile tile-purple">
+      <div class="tile-icon">🕸️</div>
+      <div class="tile-value" id="tile-tarpit">0</div>
+      <div class="tile-label">Aktive Tarpits<br>Active Tarpits</div>
+    </div>
+    <div class="tile tile-red">
+      <div class="tile-icon">☠️</div>
+      <div class="tile-value" id="tile-permbans">0</div>
+      <div class="tile-label">Permanente Sperren<br>Permanent Bans</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- ANGRIFFSINTENSITÄT / Attack intensity bar                      -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">⚔️ Angriffsintensität / Attack Intensity</div>
+    <div class="intensity-bar-wrap">
+      <div class="intensity-bar" id="intensity-bar"></div>
+      <span class="intensity-pct" id="intensity-pct">0%</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- MAIN GRID                                                      -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <div class="main-grid">
+
+    <!-- ── Linke Spalte / Left column ─────────────────────────── -->
+    <div class="col-left">
+
+      <!-- Live-Graphen / Live graphs -->
+      <div class="card">
+        <div class="card-title">📊 Verbindungen / Connections (live)</div>
+        <canvas id="chart-conns" height="120"></canvas>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🌍 Angriffskarte / Attack Map</div>
+        <canvas id="map-canvas" width="560" height="280"></canvas>
+      </div>
+
+    </div>
+
+    <!-- ── Rechte Spalte / Right column ───────────────────────── -->
+    <div class="col-right">
+
+      <!-- Angriffslog / Attack log -->
+      <div class="card card-tall">
+        <div class="card-title">🔴 Ladebildschirm-Monitor / Loading Screen Monitor</div>
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th>Zeit</th><th>IP</th><th>Land</th><th>ISP</th><th>Typ</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="attack-log-body">
+            <tr><td colspan="6" class="empty">Keine Angriffe erkannt / No attacks detected</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- BANN-LISTE / Ban list                                          -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">🔒 Gesperrte IPs / Banned IPs
+      <button class="btn-small" onclick="fetchBanList()">🔄 Aktualisieren</button>
+    </div>
+    <table class="ban-table">
+      <thead>
+        <tr><th>IP</th><th>Typ</th><th>Grund</th><th>Angriffstyp</th><th>Verbleibend</th><th>Aktion</th></tr>
+      </thead>
+      <tbody id="ban-list-body">
+        <tr><td colspan="6" class="empty">Keine gesperrten IPs / No banned IPs</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- ALERT-TOAST (oben rechts) / Alert toast (top right)           -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <div id="toast-container"></div>
+
+</div><!-- /#dashboard -->
+
+<script src="js/charts.js"></script>
+<script src="js/map.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

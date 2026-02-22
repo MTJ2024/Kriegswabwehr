@@ -496,6 +496,48 @@ AddEventHandler("playerConnecting", function(name, setKickReason, deferrals)
     deferrals.defer()
     Wait(0)
 
+    -- ╔══════════════════════════════════════════════════════════════════════╗
+    -- ║  WHITELIST-BYPASS – LÄUFT VOR ALLEN ANDEREN PRÜFUNGEN              ║
+    -- ║  WHITELIST BYPASS  – RUNS BEFORE ALL OTHER CHECKS                  ║
+    -- ║                                                                      ║
+    -- ║  Prüft: Config.Whitelist  +  Config.AdminIdentifiers  +  IP        ║
+    -- ╚══════════════════════════════════════════════════════════════════════╝
+    local playerIds = GetPlayerIdentifiers(src) or {}
+
+    -- IP direkt whitelisten ("ip:x.x.x.x" in Whitelist) / Direct IP whitelist
+    local ipEntry = "ip:" .. ip
+
+    -- Erlaubte IDs = Whitelist + AdminIdentifiers zusammengeführt
+    -- Allowed IDs = Whitelist + AdminIdentifiers merged
+    local function isWhitelisted()
+        -- IP-Direkteintrag prüfen / Check direct IP entry
+        for _, wl in ipairs(Config.Whitelist or {}) do
+            if wl == ipEntry then return true, "IP-Whitelist" end
+        end
+        -- Identifier-Einträge prüfen / Check identifier entries
+        for _, pid in ipairs(playerIds) do
+            for _, wl in ipairs(Config.Whitelist or {}) do
+                if pid == wl then return true, "Whitelist" end
+            end
+            for _, aid in ipairs(Config.AdminIdentifiers or {}) do
+                if pid == aid then return true, "Admin" end
+            end
+        end
+        return false, nil
+    end
+
+    local whitelisted, wlReason = isWhitelisted()
+    if whitelisted then
+        stats.legitimateConns = stats.legitimateConns + 1
+        Logger.info(string.format(
+            "[%s ✓] %s (%s) IP=%s – Whitelist-Bypass aktiv / whitelist bypass active",
+            wlReason, name, tostring(src), ip
+        ))
+        deferrals.done()
+        return
+    end
+    -- ══════════════════════════════════════════════════════════════════════
+
     deferrals.update("🛡️ Kriegswabwehr: Verbindungsprüfung läuft...")
     Wait(100)
 
@@ -530,8 +572,7 @@ AddEventHandler("playerConnecting", function(name, setKickReason, deferrals)
     -- ────────────────────────────────────────────────────────────────────────
     -- Schritt 2: Identifier-Sperre / Step 2: Identifier ban
     -- ────────────────────────────────────────────────────────────────────────
-    local identifiers = GetPlayerIdentifiers(src)
-    for _, id in ipairs(identifiers or {}) do
+    for _, id in ipairs(playerIds) do
         local idBlocked, idReason = IPBlocker.isIdentifierBlocked(id)
         if idBlocked then
             stats.blockedTotal      = stats.blockedTotal + 1
