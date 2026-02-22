@@ -173,6 +173,11 @@ function applyStats(data) {
     if (Array.isArray(data.pendingQueue)) {
         applyQueue(data.pendingQueue);
     }
+
+    // Online players (whitelist tab)
+    if (Array.isArray(data.onlinePlayers)) {
+        renderOnlinePlayers(data.onlinePlayers);
+    }
 }
 
 // ── Attack log ────────────────────────────────────────────────────────────────
@@ -273,7 +278,64 @@ function removeWhitelist(identifier) {
     setTimeout(() => nuiFetch('getWhitelist'), 400);
 }
 
-// ── Queue system ─────────────────────────────────────────────────────────────
+// ── Online Spieler (Whitelist-Tab) ────────────────────────────────────────────
+// Rendert alle verbundenen Spieler mit Live-Ban + Whitelist-Button
+// Renders all connected players with live-ban and whitelist button
+function renderOnlinePlayers(players) {
+    const tbody = document.getElementById('online-players-body');
+    if (!tbody) return;
+    if (!players || players.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="td-empty">Keine Spieler online</td></tr>';
+        return;
+    }
+    tbody.innerHTML = players.map(p => {
+        const wlBadge = p.whitelisted
+            ? '<span class="badge badge-perm" style="background:rgba(48,209,88,.15);border-color:var(--green);color:var(--green)">✅ WL</span>'
+            : '<span class="badge badge-blocked">❌ KEIN WL</span>';
+        const geo = (p.country ? (flag(p.country) + ' ' + (p.countryName || p.country)) : '?')
+            + (p.isp ? '<br><small style="color:var(--text-dim)">' + esc(p.isp) + '</small>' : '');
+        const wlBtn = p.whitelisted
+            ? `<button class="btn-wl" disabled title="Bereits whitelisted">✅ WL</button>`
+            : `<button class="btn-wl" onclick="whitelistPlayerLive(${p.src})" title="Spieler whitelisten">✅ Whitelist</button>`;
+        return `<tr id="oplayer-${p.src}">
+            <td><code>${p.src}</code></td>
+            <td><strong>${esc(p.name)}</strong></td>
+            <td><code>${p.ip || '?'}</code></td>
+            <td>${geo}</td>
+            <td>${p.ping !== undefined ? p.ping + ' ms' : '?'}</td>
+            <td>${wlBadge}</td>
+            <td style="white-space:nowrap">
+                ${wlBtn}
+                <button class="btn-liveban" onclick="banPlayerLive(${p.src}, '${esc(p.name)}')">🔨 Ban</button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function banPlayerLive(targetSrc, name) {
+    if (!confirm('Spieler ' + (name || targetSrc) + ' permanent sperren?')) return;
+    nuiFetch('banPlayer', { targetSrc, permanent: true });
+    showToast('🔨 Ban ausgeführt', 'Spieler ' + (name || targetSrc) + ' gesperrt.', 'warn');
+    // Reihe nach kurzer Zeit entfernen / remove row after short delay
+    setTimeout(() => {
+        const row = document.getElementById('oplayer-' + targetSrc);
+        if (row) row.remove();
+    }, 800);
+}
+
+function whitelistPlayerLive(targetSrc) {
+    nuiFetch('whitelistPlayer', { targetSrc });
+    showToast('✅ Whitelisting…', 'Spieler #' + targetSrc + ' wird whitelisted.', 'success');
+    // Button deaktivieren / disable button immediately
+    const row = document.getElementById('oplayer-' + targetSrc);
+    if (row) {
+        const btn = row.querySelector('.btn-wl');
+        if (btn) { btn.disabled = true; btn.textContent = '✅ WL'; }
+    }
+    setTimeout(() => { nuiFetch('getWhitelist'); nuiFetch('requestStats'); }, 600);
+}
+
+
 function applyQueue(queueArr) {
     state.pendingQueue = queueArr || [];
 
@@ -589,6 +651,12 @@ window.addEventListener('message', function(event) {
                 setTimeout(() => nuiFetch('getWhitelist'), 300);
             } else {
                 showToast('❌ Fehler', (msg.data && msg.data.msg) || 'Fehler', 'error');
+            }
+            break;
+        case 'banPlayerResult':
+            if (msg.data && msg.data.success) {
+                showToast('🔨 Ban', msg.data.name + ' (' + msg.data.ip + ') gesperrt', 'warn');
+                setTimeout(() => { nuiFetch('getBanList'); nuiFetch('requestStats'); }, 500);
             }
             break;
         case 'logDatesResponse':

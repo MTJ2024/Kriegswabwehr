@@ -691,7 +691,36 @@ canvas { display: block; padding: 12px; width: 100% !important; }
 }
 .btn-remove:hover { background: rgba(255,59,48,.25); }
 
-/* ── Log-Browser ─────────────────────────────────────────────────────────────── */
+/* ── Online-Spieler Aktions-Buttons / Online player action buttons ──────── */
+.btn-liveban {
+  background: var(--red-dim);
+  border: 1px solid var(--red);
+  color: var(--red);
+  padding: 3px 9px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: bold;
+  margin-right: 4px;
+}
+.btn-liveban:hover { background: rgba(255,59,48,.30); }
+
+.btn-wl {
+  background: var(--green-dim);
+  border: 1px solid var(--green);
+  color: var(--green);
+  padding: 3px 9px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: bold;
+}
+.btn-wl:hover { background: rgba(48,209,88,.25); }
+.btn-wl:disabled { opacity: .4; cursor: default; }
+
+
 
 .log-file-row {
   display: flex;

@@ -808,6 +808,44 @@ AddEventHandler("kriegswabwehr:requestStats", function()
                 for _ in pairs(Whitelist.list()) do n = n + 1 end
                 return n
             end)(),
+            -- ── Alle verbundenen Spieler (auch Whitelisted/Bypass)
+            -- ── All connected players (including whitelisted/bypass)
+            onlinePlayers     = (function()
+                local list = {}
+                for _, pid in ipairs(GetPlayers()) do
+                    local pidNum = tonumber(pid)
+                    if pidNum then
+                        local rawEP = GetPlayerEndpoint(pidNum) or ""
+                        local playerIP = rawEP:match("^([^:]+)") or rawEP
+                        local ids = GetPlayerIdentifiers(pidNum) or {}
+                        -- Whitelist-Status prüfen / check whitelist status
+                        local wlStatus = false
+                        local wlList = Whitelist.list()
+                        for _, idStr in ipairs(ids) do
+                            if wlList[idStr] then wlStatus = true; break end
+                        end
+                        -- IP als Key prüfen / check IP key
+                        if not wlStatus and playerIP ~= "" then
+                            if wlList["ip:" .. playerIP] then wlStatus = true end
+                        end
+                        -- Gecachte Geo-Daten (non-blocking) / cached geo data (non-blocking)
+                        local geo = IPBlocker.getCachedGeo(playerIP)
+                        table.insert(list, {
+                            src         = pidNum,
+                            name        = GetPlayerName(pidNum) or "?",
+                            ip          = playerIP,
+                            identifiers = ids,
+                            whitelisted = wlStatus,
+                            country     = geo.country or "",
+                            countryName = geo.countryName or "",
+                            isp         = geo.isp or "",
+                            city        = geo.city or "",
+                            ping        = GetPlayerPing(pidNum) or 0,
+                        })
+                    end
+                end
+                return list
+            end)(),
         }
     end)
 
@@ -830,6 +868,7 @@ AddEventHandler("kriegswabwehr:requestStats", function()
             tarpitStats       = { active = 0, total = 0 },
             rateLimitStats    = {},
             whitelistCount    = 0,
+            onlinePlayers     = {},
         })
     end
 end)
@@ -905,8 +944,108 @@ AddEventHandler("kriegswabwehr:removeWhitelist", function(data)
 end)
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- Periodisches Zurücksetzen der Minuten-Statistik / Periodic stats reset
+-- Live-Spieler-Aktionen / Live player actions (ban, whitelist by server-ID)
 -- ─────────────────────────────────────────────────────────────────────────────
+
+RegisterNetEvent("kriegswabwehr:banPlayer")
+AddEventHandler("kriegswabwehr:banPlayer", function(data)
+    local src = source
+    if not AntiTheft.isAdmin(src) then return end
+    if not data or not data.targetSrc then return end
+    local tSrc = tonumber(data.targetSrc)
+    if not tSrc then return end
+
+    local rawEP = GetPlayerEndpoint(tSrc) or ""
+    local tIP   = rawEP:match("^([^:]+)") or rawEP
+    local tName = GetPlayerName(tSrc) or "?"
+    local permanent = data.permanent ~= false   -- default permanent
+    local reason    = data.reason or "Live-Ban durch Admin / Live ban by admin"
+
+    if tIP ~= "" then
+        if permanent then
+            IPBlocker.permBan(tIP, reason, "live-ban")
+        else
+            IPBlocker.tempBan(tIP, Config.TempBanDuration or 3600, reason, "live-ban")
+        end
+    end
+    -- Identifier-Bans
+    local ids = GetPlayerIdentifiers(tSrc) or {}
+    for _, id in ipairs(ids) do
+        if id:match("^license:") or id:match("^steam:") then
+            IPBlocker.banIdentifier(id, reason)
+        end
+    end
+
+    Logger.adminAction(src, permanent and "PERM_BAN" or "TEMP_BAN", tIP,
+        string.format("Spieler=%s Grund=%s", tName, reason))
+
+    -- Spieler kicken / Kick the player
+    DropPlayer(tSrc, reason)
+
+    TriggerClientEvent("kriegswabwehr:banPlayerResult", src, {
+        success   = true,
+        targetSrc = tSrc,
+        name      = tName,
+        ip        = tIP,
+        permanent = permanent,
+    })
+end)
+
+-- Spieler per Server-ID whitelisten / Whitelist player by server ID
+RegisterNetEvent("kriegswabwehr:whitelistPlayer")
+AddEventHandler("kriegswabwehr:whitelistPlayer", function(data)
+    local src = source
+    if not AntiTheft.isAdmin(src) then return end
+    if not data or not data.targetSrc then return end
+    local tSrc  = tonumber(data.targetSrc)
+    if not tSrc then return end
+
+    local ids   = GetPlayerIdentifiers(tSrc) or {}
+    local tName = GetPlayerName(tSrc) or "?"
+    local note  = "Whitelisted by admin in-game"
+    local added = 0
+
+    -- Bevorzuge license: Identifier / prefer license: identifier
+    local preferred = nil
+    for _, id in ipairs(ids) do
+        if id:match("^license:") then preferred = id; break end
+    end
+    if not preferred then
+        for _, id in ipairs(ids) do
+            if id:match("^steam:") or id:match("^fivem:") then preferred = id; break end
+        end
+    end
+
+    if preferred then
+        local ok, msg = Whitelist.add(preferred, "admin:" .. tostring(src), note)
+        if ok then added = 1 end
+        Logger.adminAction(src, "WHITELIST_ADD_LIVE", preferred,
+            string.format("Spieler=%s Result=%s", tName, ok and "OK" or msg))
+    end
+
+    TriggerClientEvent("kriegswabwehr:whitelistActionResult", src, {
+        success    = added > 0,
+        action     = "add",
+        identifier = preferred or "?",
+        msg        = added > 0 and ("Spieler " .. tName .. " gewhitelisted") or "Kein gültiger Identifier gefunden",
+    })
+
+    -- Whitelist-Liste an Admin neu senden / Refresh whitelist for admin
+    if added > 0 then
+        local entries = {}
+        for id, wdata in pairs(Whitelist.list()) do
+            table.insert(entries, {
+                identifier = id,
+                addedBy    = wdata.addedBy,
+                addedAt    = wdata.addedAt,
+                note       = wdata.note or "",
+            })
+        end
+        TriggerClientEvent("kriegswabwehr:whitelistResponse", src, { entries = entries })
+    end
+end)
+
+
 
 CreateThread(function()
     while true do

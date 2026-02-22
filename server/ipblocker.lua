@@ -313,9 +313,13 @@ function IPBlocker.checkGeoIP(ip, callback)
     end, "GET", "", {})
 end
 
--- ─────────────────────────────────────────────────────────────────────────────
--- Entsperren / Unban
--- ─────────────────────────────────────────────────────────────────────────────
+-- Gecachte Geo-Daten abrufen (non-blocking) / Get cached geo data (non-blocking)
+function IPBlocker.getCachedGeo(ip)
+    local clean = cleanIP(ip)
+    return geoCache[clean] or {}
+end
+
+
 
 function IPBlocker.unban(ip)
     local clean = cleanIP(ip)

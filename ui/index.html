@@ -174,15 +174,38 @@
       <div class="tab-header">
         <div>
           <h2 class="tab-title">✅ Whitelist-Verwaltung</h2>
-          <p class="tab-sub">Spieler permanent freischalten.</p>
+          <p class="tab-sub">Spieler permanent freischalten. Live-Ansicht aller verbundenen Spieler.</p>
         </div>
         <div class="tab-actions">
           <button class="btn btn-primary" onclick="openAddWhitelistModal()">➕ Eintrag hinzufügen</button>
-          <button class="btn btn-secondary" onclick="nuiFetch('getWhitelist')">🔄 Aktualisieren</button>
+          <button class="btn btn-secondary" onclick="nuiFetch('getWhitelist'); nuiFetch('requestStats')">🔄 Aktualisieren</button>
         </div>
       </div>
 
+      <!-- Online Spieler Sektion -->
+      <div class="panel" style="margin-bottom:18px">
+        <div class="panel-title">🟢 Online Spieler – Live-Übersicht</div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>IP</th>
+              <th>Land / ISP</th>
+              <th>Ping</th>
+              <th>Status</th>
+              <th>Aktionen</th>
+            </tr>
+          </thead>
+          <tbody id="online-players-body">
+            <tr><td colspan="7" class="td-empty">Keine Spieler online</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Whitelist-Einträge -->
       <div class="panel">
+        <div class="panel-title">📋 Whitelist-Einträge</div>
         <table class="data-table">
           <thead>
             <tr><th>Identifier</th><th>Hinzugefügt von</th><th>Datum</th><th>Notiz</th><th>Aktion</th></tr>

@@ -159,6 +159,30 @@ AddEventHandler("kriegswabwehr:whitelistActionResult", function(data)
     SendNUIMessage({ type = "whitelistActionResult", data = data })
 end)
 
+-- NUI: Spieler live sperren / Live ban player by server ID
+RegisterNUICallback("banPlayer", function(data, cb)
+    if data and data.targetSrc then
+        TriggerServerEvent("kriegswabwehr:banPlayer", data)
+    end
+    cb({})
+end)
+
+-- NUI: Spieler live whitelisten / Live whitelist player by server ID
+RegisterNUICallback("whitelistPlayer", function(data, cb)
+    if data and data.targetSrc then
+        TriggerServerEvent("kriegswabwehr:whitelistPlayer", data)
+    end
+    cb({})
+end)
+
+-- Ban-Spieler-Ergebnis / Ban player result
+RegisterNetEvent("kriegswabwehr:banPlayerResult")
+AddEventHandler("kriegswabwehr:banPlayerResult", function(data)
+    SendNUIMessage({ type = "banPlayerResult", data = data })
+end)
+
+
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Log-Persistenz NUI-Callbacks / Log persistence NUI callbacks
 -- ─────────────────────────────────────────────────────────────────────────────
