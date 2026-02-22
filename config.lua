@@ -159,3 +159,73 @@ Config.AttackSignatures = {
     -- Maximale identische Verbindungspakete / Maximum identical connection packets
     maxIdenticalPackets = 3,
 }
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Tarpit-Konfiguration / Tarpit Configuration
+-- ─────────────────────────────────────────────────────────────────────────────
+-- LEGAL: Verlangsamt NUR eingehende Verbindungen auf unserem Server.
+--        Kein aktiver Angriff – reines Ressourcen-Erschöpfungs-Prinzip.
+-- LEGAL: Only slows incoming connections on OUR server.
+--        No active attack – pure resource exhaustion principle.
+Config.Tarpit = {
+    -- Tarpit aktivieren / Enable tarpit
+    enabled = true,
+    -- Maximale Tarpit-Dauer in ms / Maximum tarpit duration in ms
+    -- (Angreifer muss Verbindung so lange offen halten / Attacker must keep connection open this long)
+    maxDurationMs = 45000,   -- 45 Sekunden / seconds
+    -- Mindest-Verletzungen vor Tarpit / Minimum violations before tarpit
+    minViolations = 1,
+}
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Visuelle Abschreckung / Visual Deterrence
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Zeigt dem Angreifer seine eigenen öffentlichen Daten im Ladebildschirm.
+-- LEGAL: Öffentliche IP-Informationen – keine privaten Daten.
+-- Shows the attacker their own PUBLIC data on the loading screen.
+-- LEGAL: Public IP information only – no private data.
+Config.VisualDeterrence = {
+    -- Aktivieren / Enable
+    enabled = true,
+    -- Eigene IP anzeigen / Show own IP
+    showIP = true,
+    -- ISP/Anbieter anzeigen / Show ISP/provider
+    showISP = true,
+    -- Land und Stadt anzeigen / Show country and city
+    showLocation = true,
+    -- Subnetz anzeigen / Show subnet
+    showSubnet = true,
+    -- Warnung über ISP-Meldung anzeigen / Show ISP report warning
+    showAbuseWarning = true,
+    -- Referenz-ID für Strafanzeige anzeigen / Show reference ID for police report
+    showRefID = true,
+}
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Honeypot-Modus / Honeypot Mode
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Gebannte IPs erhalten KEINE sofortige Ablehnung, sondern werden in einer
+-- Fake-Verbindungsschleife gehalten. Sie denken, sie verbinden sich, während
+-- alles protokolliert wird.
+-- Banned IPs do NOT get an immediate rejection – they are held in a fake
+-- connection loop, thinking they are connecting while everything is logged.
+Config.Honeypot = {
+    -- Aktivieren / Enable
+    enabled = true,
+    -- Dauer der Honeypot-Täuschung in ms / Honeypot illusion duration in ms
+    durationMs = 30000,   -- 30 Sekunden / seconds
+    -- Nur für permanente Sperren / Only for permanent bans
+    permBanOnly = false,
+}
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Automatische ISP-Missbrauchsmeldung / Automatic ISP Abuse Reporting
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Generiert RFC-5965-ARF-Berichte und sendet sie via Discord zum Weiterleiten.
+-- Generates RFC 5965 ARF reports and sends them via Discord for forwarding.
+Config.AbuseReporting = {
+    -- Aktivieren / Enable
+    enabled = true,
+    -- Ab welcher Eskalationsstufe melden / From which escalation level to report
+    minLevel = 3,
+}
