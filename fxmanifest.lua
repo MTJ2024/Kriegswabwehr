@@ -13,12 +13,13 @@ version     '1.0.0'
 -- Server-seitige Skripte / Server-side scripts
 -- ─────────────────────────────────────────────────────────────────────────────
 server_scripts {
+    'server/license.lua',        -- Copyright-Schutz zuerst / Copyright protection first
     'config.lua',
     'server/logger.lua',
     'server/ratelimiter.lua',
     'server/ipblocker.lua',
     'server/antiTheft.lua',
-    'server/whitelist.lua',      -- Whitelist vor main laden / Load whitelist before main
+    'server/whitelist.lua',
     'server/tarpit.lua',
     'server/abuseReporter.lua',
     'server/events.lua',

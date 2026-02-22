@@ -162,7 +162,14 @@ end
 
 -- Prüft ob ein Spieler Admin-Rechte hat
 -- Checks whether a player has admin rights
+-- Ebene 1: ACE/txAdmin | Ebene 2: Config.AdminIdentifiers
 function AntiTheft.isAdmin(source)
+    if not source or source == 0 then return false end
+    -- ACE-Recht prüfen (txAdmin, server.cfg) / Check ACE permission
+    if IsPlayerAceAllowed(tostring(source), "kriegswabwehr.admin") then
+        return true
+    end
+    -- Config-Fallback / Config fallback
     local identifiers = GetPlayerIdentifiers(source)
     for _, adminId in ipairs(Config.AdminIdentifiers or {}) do
         for _, playerId in ipairs(identifiers or {}) do
