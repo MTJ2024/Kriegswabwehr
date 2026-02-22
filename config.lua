@@ -112,6 +112,67 @@ Config.Whitelist = {
 -- Admin-Dashboard-Freigabe über NUI / Admin dashboard via NUI
 Config.AdminDashboardEnabled = true
 
+-- ═════════════════════════════════════════════════════════════════════════════
+-- 🔴 BLOCKLIST – MANUELLE SPERRLISTE / MANUAL BLOCK LIST
+-- ═════════════════════════════════════════════════════════════════════════════
+-- Alle Einträge hier werden beim Serverstart SOFORT und PERMANENT gesperrt.
+-- All entries here are blocked IMMEDIATELY and PERMANENTLY on server start.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+Config.Blocklist = {
+
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- 🔒 EINZELNE IP-ADRESSEN / SINGLE IP ADDRESSES
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- Format: { ip = "x.x.x.x", reason = "Grund" }
+    -- ─────────────────────────────────────────────────────────────────────────
+    ips = {
+        -- { ip = "1.2.3.4",       reason = "DDoS Angreifer / DDoS attacker" },
+        -- { ip = "5.6.7.8",       reason = "Bekannter Cheater / Known cheater" },
+        -- { ip = "185.220.101.1", reason = "Tor Exit Node" },
+    },
+
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- 🔗 SUBNETZE (/24) / SUBNETS (/24)
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- Sperrt ALLE IPs im /24-Bereich (x.x.x.0 – x.x.x.255)
+    -- Blocks ALL IPs in the /24 range (x.x.x.0 – x.x.x.255)
+    -- Format: { subnet = "x.x.x", reason = "Grund" }
+    --          (Nur die ersten 3 Oktette / Only first 3 octets)
+    -- ─────────────────────────────────────────────────────────────────────────
+    subnets = {
+        -- { subnet = "185.220.101", reason = "Tor-Netzwerk / Tor network" },
+        -- { subnet = "45.155.205",  reason = "Bekannte DDoS-Range / Known DDoS range" },
+        -- { subnet = "192.168.1",   reason = "Test" },
+    },
+
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- 📋 SPIELER-IDENTIFIER / PLAYER IDENTIFIERS
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- Sperrt Spieler anhand ihrer Steam/License/Discord/Xbox-ID
+    -- Blocks players by their Steam/License/Discord/Xbox ID
+    -- Format: { id = "typ:wert", reason = "Grund" }
+    -- Typen / Types: "steam:HEX", "license:HEX", "discord:ID", "xbl:ID", "live:ID"
+    -- ─────────────────────────────────────────────────────────────────────────
+    identifiers = {
+        -- { id = "steam:110000100000001",                        reason = "Cheater" },
+        -- { id = "license:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", reason = "Cheater" },
+        -- { id = "discord:123456789012345678",                   reason = "Griefing" },
+    },
+
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- 🌍 LÄNDER-BLOCKING / COUNTRY BLOCKING
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- Sperrt alle Verbindungen aus bestimmten Ländern (ISO 3166-1 Alpha-2)
+    -- Blocks all connections from specific countries (ISO 3166-1 Alpha-2)
+    -- Vollständige Ländercodes: https://www.iban.com/country-codes
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- countries = { "CN", "KP", "RU", "IR" },  -- Beispiel/Example
+    countries = {},
+
+}
+-- ═════════════════════════════════════════════════════════════════════════════
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Datenbanksicherheit / Database Security
 -- ─────────────────────────────────────────────────────────────────────────────

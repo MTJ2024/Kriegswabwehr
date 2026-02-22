@@ -39,10 +39,74 @@ local blockedIdentifiers = {}
 -- Initialisierung / Initialization
 -- ─────────────────────────────────────────────────────────────────────────────
 
--- Geo-Block-Liste aus Config laden / Load geo block list from config
+-- Geo-Block-Liste aus Config laden (Config.GeoBlock + Config.Blocklist.countries)
+-- Load geo block list from config (both sources merged)
 for _, cc in ipairs(Config.GeoBlock or {}) do
     blockedCountries[cc] = true
 end
+for _, cc in ipairs((Config.Blocklist or {}).countries or {}) do
+    blockedCountries[cc] = true
+end
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Config.Blocklist beim Start laden / Load Config.Blocklist on startup
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Alle manuellen Einträge aus config.lua werden sofort in die Live-Sperrlisten
+-- übernommen. Kein Serverneustart nötig wenn du die Werte zur Laufzeit neu lädst.
+-- All manual entries from config.lua are loaded into live ban lists immediately.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+local function loadBlocklist()
+    local bl      = Config.Blocklist or {}
+    local count   = { ips = 0, subnets = 0, ids = 0 }
+
+    -- Einzelne IPs / Single IPs
+    for _, entry in ipairs(bl.ips or {}) do
+        if entry.ip and entry.ip ~= "" then
+            local clean = cleanIP(entry.ip)
+            permBans[clean] = {
+                reason     = entry.reason or "Config.Blocklist",
+                timestamp  = 0,   -- 0 = statischer Eintrag / static entry
+                attackType = "Static Blocklist",
+                static     = true,
+            }
+            count.ips = count.ips + 1
+        end
+    end
+
+    -- Subnetze / Subnets
+    for _, entry in ipairs(bl.subnets or {}) do
+        if entry.subnet and entry.subnet ~= "" then
+            -- Sicherstellen dass nur 3 Oktette übergeben werden / Ensure only 3 octets
+            local subnet = entry.subnet:match("^(%d+%.%d+%.%d+)") or entry.subnet
+            blockedSubnets[subnet] = {
+                reason    = entry.reason or "Config.Blocklist",
+                timestamp = 0,
+                static    = true,
+            }
+            count.subnets = count.subnets + 1
+        end
+    end
+
+    -- Identifier / Identifiers
+    for _, entry in ipairs(bl.identifiers or {}) do
+        if entry.id and entry.id ~= "" then
+            blockedIdentifiers[entry.id] = {
+                reason    = entry.reason or "Config.Blocklist",
+                timestamp = 0,
+                static    = true,
+            }
+            count.ids = count.ids + 1
+        end
+    end
+
+    Logger.info(string.format(
+        "[BLOCKLIST] Geladen / Loaded: %d IPs, %d Subnetze/Subnets, %d Identifier/Identifiers",
+        count.ips, count.subnets, count.ids
+    ))
+end
+
+loadBlocklist()
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Hilfsfunktionen / Helper functions
