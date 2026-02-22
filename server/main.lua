@@ -781,7 +781,7 @@ end)
 RegisterNetEvent("kriegswabwehr:requestStats")
 AddEventHandler("kriegswabwehr:requestStats", function()
     local src = source
-    if not AntiTheft.isAdmin(src) then
+    if not AntiTheft.isOwner(src) then
         -- Gib Fehlerstatus zurück damit NUI "Kein Zugriff" anzeigen kann
         -- Send error status so NUI can display "No access"
         TriggerClientEvent("kriegswabwehr:statsResponse", src, { _notAdmin = true })
@@ -876,7 +876,7 @@ end)
 RegisterNetEvent("kriegswabwehr:getBanList")
 AddEventHandler("kriegswabwehr:getBanList", function()
     local src = source
-    if not AntiTheft.isAdmin(src) then return end
+    if not AntiTheft.isOwner(src) then return end
     TriggerClientEvent("kriegswabwehr:banListResponse", src, {
         bans    = IPBlocker.getBanList(),
         subnets = IPBlocker.getSubnetList(),
@@ -886,7 +886,7 @@ end)
 RegisterNetEvent("kriegswabwehr:unbanIP")
 AddEventHandler("kriegswabwehr:unbanIP", function(ip)
     local src = source
-    if not AntiTheft.isAdmin(src) then return end
+    if not AntiTheft.isOwner(src) then return end
     local success = IPBlocker.unban(ip)
     Logger.adminAction(src, "UNBAN", ip, success and "Erfolgreich" or "IP nicht gefunden")
     TriggerClientEvent("kriegswabwehr:unbanResult", src, { success = success, ip = ip })
@@ -899,7 +899,7 @@ end)
 RegisterNetEvent("kriegswabwehr:getWhitelist")
 AddEventHandler("kriegswabwehr:getWhitelist", function()
     local src = source
-    if not AntiTheft.isAdmin(src) then return end
+    if not AntiTheft.isOwner(src) then return end
     local entries = {}
     for id, data in pairs(Whitelist.list()) do
         table.insert(entries, {
@@ -916,7 +916,7 @@ end)
 RegisterNetEvent("kriegswabwehr:addWhitelist")
 AddEventHandler("kriegswabwehr:addWhitelist", function(data)
     local src = source
-    if not AntiTheft.isAdmin(src) then return end
+    if not AntiTheft.isOwner(src) then return end
     if not data or not data.identifier then return end
     local ok, msg = Whitelist.add(data.identifier, "admin:" .. tostring(src), data.note or "")
     Logger.adminAction(src, "WHITELIST_ADD", data.identifier, ok and "OK" or msg)
@@ -931,7 +931,7 @@ end)
 RegisterNetEvent("kriegswabwehr:removeWhitelist")
 AddEventHandler("kriegswabwehr:removeWhitelist", function(data)
     local src = source
-    if not AntiTheft.isAdmin(src) then return end
+    if not AntiTheft.isOwner(src) then return end
     if not data or not data.identifier then return end
     local ok, msg = Whitelist.remove(data.identifier)
     Logger.adminAction(src, "WHITELIST_REMOVE", data.identifier, ok and "OK" or msg)
@@ -950,7 +950,7 @@ end)
 RegisterNetEvent("kriegswabwehr:banPlayer")
 AddEventHandler("kriegswabwehr:banPlayer", function(data)
     local src = source
-    if not AntiTheft.isAdmin(src) then return end
+    if not AntiTheft.isOwner(src) then return end
     if not data or not data.targetSrc then return end
     local tSrc = tonumber(data.targetSrc)
     if not tSrc then return end
@@ -995,7 +995,7 @@ end)
 RegisterNetEvent("kriegswabwehr:whitelistPlayer")
 AddEventHandler("kriegswabwehr:whitelistPlayer", function(data)
     local src = source
-    if not AntiTheft.isAdmin(src) then return end
+    if not AntiTheft.isOwner(src) then return end
     if not data or not data.targetSrc then return end
     local tSrc  = tonumber(data.targetSrc)
     if not tSrc then return end
@@ -1070,7 +1070,7 @@ RegisterCommand("kwdashboard", function(src, args, raw)
         Logger.info("Dashboard-Befehl von Serverkonsole")
         return
     end
-    if not AntiTheft.isAdmin(src) then
+    if not AntiTheft.isOwner(src) then
         TriggerClientEvent("chat:addMessage", src, {
             color = {255, 50, 50},
             args  = {"[KW]", "Keine Berechtigung / No permission."},
@@ -1105,9 +1105,9 @@ RegisterCommand("kw_diagadmin", function(src, args, raw)
     print("  command.ban      = " .. tostring(IsPlayerAceAllowed(tostring(targetSrc), "command.ban")))
     print("  command.kick     = " .. tostring(IsPlayerAceAllowed(tostring(targetSrc), "command.kick")))
     print("  kw.admin         = " .. tostring(IsPlayerAceAllowed(tostring(targetSrc), "kriegswabwehr.admin")))
-    print("  isAdmin()        = " .. tostring(AntiTheft.isAdmin(targetSrc)))
-    if not AntiTheft.isAdmin(targetSrc) then
-        print("[KW DIAG] LÖSUNG / FIX: Füge eine dieser Zeilen in Config.DashboardAccessIDs ein:")
+    print("  isOwner()        = " .. tostring(AntiTheft.isOwner(targetSrc)))
+    if not AntiTheft.isOwner(targetSrc) then
+        print("[KW DIAG] LÖSUNG / FIX: Füge eine dieser Zeilen in Config.OwnerIdentifiers ein:")
         for _, id in ipairs(ids) do
             if id:sub(1,8) == "license:" or id:sub(1,6) == "steam:" then
                 print('  "' .. id .. '",')
@@ -1123,7 +1123,7 @@ end, true)
 RegisterNetEvent("kriegswabwehr:getLogDates")
 AddEventHandler("kriegswabwehr:getLogDates", function()
     local src = source
-    if not AntiTheft.isAdmin(src) then return end
+    if not AntiTheft.isOwner(src) then return end
     TriggerClientEvent("kriegswabwehr:logDatesResponse", src, {
         dates = Logger.getLogDates()
     })
@@ -1132,7 +1132,7 @@ end)
 RegisterNetEvent("kriegswabwehr:getLogByDate")
 AddEventHandler("kriegswabwehr:getLogByDate", function(data)
     local src = source
-    if not AntiTheft.isAdmin(src) then return end
+    if not AntiTheft.isOwner(src) then return end
     local dateKey = data and data.key
     if not dateKey or not dateKey:match("^%d%d%d%d%d%d%d%d$") then return end
     TriggerClientEvent("kriegswabwehr:logByDateResponse", src, {
@@ -1144,7 +1144,7 @@ end)
 RegisterNetEvent("kriegswabwehr:extendLogRetention")
 AddEventHandler("kriegswabwehr:extendLogRetention", function(data)
     local src = source
-    if not AntiTheft.isAdmin(src) then return end
+    if not AntiTheft.isOwner(src) then return end
     local dateKey   = data and data.key
     local extraDays = (data and data.extraDays) or 5
     if not dateKey or not dateKey:match("^%d%d%d%d%d%d%d%d$") then return end
@@ -1162,7 +1162,7 @@ end)
 RegisterNetEvent("kriegswabwehr:exportLog")
 AddEventHandler("kriegswabwehr:exportLog", function(data)
     local src = source
-    if not AntiTheft.isAdmin(src) then return end
+    if not AntiTheft.isOwner(src) then return end
     local dateKey = data and data.key
     if not dateKey or not dateKey:match("^%d%d%d%d%d%d%d%d$") then return end
     Logger.adminAction(src, "EXPORT_LOG", dateKey, "Log-Export angefordert / Log export requested")

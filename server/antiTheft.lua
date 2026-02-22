@@ -173,8 +173,62 @@ function AntiTheft.validateSteamToken(source, preloadedIds)
     return false
 end
 
--- Prüft ob ein Spieler Admin-Rechte hat
--- Checks whether a player has admin rights
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Owner-Prüfung: NUR Config.OwnerIdentifiers haben Dashboard-Zugriff
+-- Owner check: ONLY Config.OwnerIdentifiers have dashboard access
+-- Falls die Liste leer ist -> fällt auf isAdmin() zurück (Abwärtskompatibilität)
+-- If list is empty -> falls back to isAdmin() (backward compatibility)
+-- ─────────────────────────────────────────────────────────────────────────────
+function AntiTheft.isOwner(source)
+    if not source or source == 0 then return false end
+
+    -- Wenn OwnerIdentifiers nicht gesetzt oder leer -> isAdmin()-Fallback
+    -- If OwnerIdentifiers not set or empty -> isAdmin() fallback
+    if not Config.OwnerIdentifiers or #Config.OwnerIdentifiers == 0 then
+        if Config.Debug then
+            print(string.format(
+                "[KW DEBUG isOwner] src=%s: OwnerIdentifiers leer -> isAdmin()-Fallback",
+                tostring(source)
+            ))
+        end
+        return AntiTheft.isAdmin(source)
+    end
+
+    local identifiers = GetPlayerIdentifiers(source) or {}
+    local rawEP = GetPlayerEndpoint(tostring(source)) or ""
+    local ipKey = "ip:" .. (rawEP:match("^([^:]+)") or "")
+
+    for _, ownerId in ipairs(Config.OwnerIdentifiers) do
+        -- IP-Direktvergleich
+        if ownerId == ipKey then
+            if Config.Debug then
+                print(string.format("[KW DEBUG isOwner] src=%s -> OWNER via IP %s", tostring(source), ownerId))
+            end
+            return true
+        end
+        -- Identifier-Vergleich
+        for _, playerId in ipairs(identifiers) do
+            if playerId == ownerId then
+                if Config.Debug then
+                    print(string.format("[KW DEBUG isOwner] src=%s -> OWNER via %s", tostring(source), ownerId))
+                end
+                return true
+            end
+        end
+    end
+
+    -- Kein Treffer -> Zugriff verweigert, KEINE Fehlermeldung an Spieler
+    -- No match -> access denied, NO error message to player
+    if Config.Debug then
+        print(string.format(
+            "[KW DEBUG isOwner] src=%s KEIN OWNER / NOT OWNER | IDs=%s | IP=%s",
+            tostring(source), table.concat(identifiers, ", "), ipKey
+        ))
+    end
+    return false
+end
+
+
 -- Ebene 1: ACE (txAdmin-Standard-Gruppen + eigene) | Ebene 2: Identifier-Listen
 -- Level 1: ACE (txAdmin default groups + custom)   | Level 2: Identifier lists
 function AntiTheft.isAdmin(source)

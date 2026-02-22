@@ -32,7 +32,7 @@ local function notifyAdmins(payload)
     local players = GetPlayers()
     for _, pidStr in ipairs(players) do
         local pid = tonumber(pidStr)
-        if pid and AntiTheft.isAdmin(pid) then
+        if pid and AntiTheft.isOwner(pid) then
             TriggerClientEvent("kriegswabwehr:queueUpdate", pid, payload)
         end
     end
@@ -232,7 +232,7 @@ end)
 RegisterNetEvent("kriegswabwehr:approveQueue")
 AddEventHandler("kriegswabwehr:approveQueue", function(data)
     local adminSrc       = source
-    if not AntiTheft.isAdmin(adminSrc) then return end
+    if not AntiTheft.isOwner(adminSrc) then return end
     local token          = data and data.token
     local addToWhitelist = data and data.permanent == true
     if not token then return end
@@ -249,7 +249,7 @@ end)
 RegisterNetEvent("kriegswabwehr:denyQueue")
 AddEventHandler("kriegswabwehr:denyQueue", function(data)
     local adminSrc = source
-    if not AntiTheft.isAdmin(adminSrc) then return end
+    if not AntiTheft.isOwner(adminSrc) then return end
     local token  = data and data.token
     local reason = data and data.reason
     if not token then return end
@@ -266,7 +266,7 @@ end)
 RegisterNetEvent("kriegswabwehr:getQueue")
 AddEventHandler("kriegswabwehr:getQueue", function()
     local src = source
-    if not AntiTheft.isAdmin(src) then return end
+    if not AntiTheft.isOwner(src) then return end
     TriggerClientEvent("kriegswabwehr:queueUpdate", src, {
         type    = "snapshot",
         pending = WhitelistQueue.getAll(),
@@ -279,7 +279,7 @@ local queueModeEnabled = (Config.WhitelistQueue and Config.WhitelistQueue.enable
 RegisterNetEvent("kriegswabwehr:setQueueMode")
 AddEventHandler("kriegswabwehr:setQueueMode", function(data)
     local src = source
-    if not AntiTheft.isAdmin(src) then return end
+    if not AntiTheft.isOwner(src) then return end
     queueModeEnabled = (data and data.enabled == true)
     Logger.info(string.format(
         "[QUEUE] Modus geaendert von Admin %s: %s",

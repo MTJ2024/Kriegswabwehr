@@ -95,6 +95,30 @@ Config.AdminIdentifiers = {
 }
 
 -- ─────────────────────────────────────────────────────────────────────────────
+-- 👑 OWNER – NUR DIESER SPIELER HAT DASHBOARD-ZUGRIFF
+--    ONLY THIS PLAYER HAS DASHBOARD ACCESS
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Trage DEINE eigenen Identifier hier ein.
+-- Nur diese Spieler können /kwdashboard öffnen, Bans/Whitelist verwalten,
+-- Logs sehen und Spieler-Aktionen ausführen.
+-- Alle anderen – auch txAdmin-Admins – sehen NICHTS.
+--
+-- Add YOUR OWN identifiers here.
+-- Only these players can open /kwdashboard, manage bans/whitelist,
+-- see logs, and perform player actions. All others – even txAdmin admins – see NOTHING.
+--
+-- Wie finde ich meine ID? / How to find my ID?
+--   Methode 1 – txAdmin:  Players -> dein Name -> Identifiers
+--   Methode 2 – In-game:  /kwdashboard eingeben -> Konsole zeigt dann deine IDs
+--   Methode 3 – Konsole:  kw_whitelist check 1  (wenn du Spieler #1 bist)
+-- ─────────────────────────────────────────────────────────────────────────────
+Config.OwnerIdentifiers = {
+    -- "license:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",   -- <-- DEINE LICENSE ID
+    -- "steam:110000100000001",                              -- <-- DEINE STEAM HEX ID
+    -- "ip:1.2.3.4",                                        -- <-- DEINE IP (letzter Fallback)
+}
+
+-- ─────────────────────────────────────────────────────────────────────────────
 -- ⚠️  WHITELIST – WICHTIG FÜR DICH! / IMPORTANT FOR YOU!
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Trage DEINE eigenen Identifier hier ein – diese Spieler überspringen

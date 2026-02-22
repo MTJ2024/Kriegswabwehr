@@ -42,8 +42,8 @@ function openDashboard() {
         if (!_statsReceived) {
             showToast(
                 '⚠️ Keine Daten empfangen',
-                'Mögliche Ursache: Kein Admin-Zugriff. ' +
-                'Lösung: Trage deine license:xxx in Config.DashboardAccessIDs ' +
+                'Mögliche Ursache: Kein Owner-Zugriff. ' +
+                'Lösung: Trage deine license:xxx in Config.OwnerIdentifiers ' +
                 'oder setze Config.Debug = true und prüfe die Serverkonsole.',
                 'error'
             );
@@ -111,10 +111,10 @@ function applyStats(data) {
     // Not-admin feedback
     if (data._notAdmin) {
         showToast(
-            '🔒 Kein Admin-Zugriff',
-            'Dein Identifier ist nicht als Admin hinterlegt. ' +
-            'Trage deine License-ID in Config.DashboardAccessIDs ein ' +
-            'oder führe in der txAdmin-Konsole aus: kw_whitelist check 1',
+            '🔒 Kein Zugriff',
+            'Nur der Owner darf das Dashboard nutzen. ' +
+            'Trage deine License-ID in Config.OwnerIdentifiers ein ' +
+            'oder führe in der txAdmin-Konsole aus: kw_diagadmin 1',
             'error'
         );
         return;
