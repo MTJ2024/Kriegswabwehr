@@ -229,7 +229,8 @@ end)
 -- ─────────────────────────────────────────────────────────────────────────────
 
 -- Admin genehmigt eine Anfrage / Admin approves a request
-RegisterNetEvent("kriegswabwehr:approveQueue", function(data)
+RegisterNetEvent("kriegswabwehr:approveQueue")
+AddEventHandler("kriegswabwehr:approveQueue", function(data)
     local adminSrc       = source
     if not AntiTheft.isAdmin(adminSrc) then return end
     local token          = data and data.token
@@ -245,7 +246,8 @@ RegisterNetEvent("kriegswabwehr:approveQueue", function(data)
 end)
 
 -- Admin lehnt eine Anfrage ab / Admin denies a request
-RegisterNetEvent("kriegswabwehr:denyQueue", function(data)
+RegisterNetEvent("kriegswabwehr:denyQueue")
+AddEventHandler("kriegswabwehr:denyQueue", function(data)
     local adminSrc = source
     if not AntiTheft.isAdmin(adminSrc) then return end
     local token  = data and data.token
@@ -261,7 +263,8 @@ RegisterNetEvent("kriegswabwehr:denyQueue", function(data)
 end)
 
 -- Admin fordert aktuellen Queue-Zustand an / Admin requests current queue state
-RegisterNetEvent("kriegswabwehr:getQueue", function()
+RegisterNetEvent("kriegswabwehr:getQueue")
+AddEventHandler("kriegswabwehr:getQueue", function()
     local src = source
     if not AntiTheft.isAdmin(src) then return end
     TriggerClientEvent("kriegswabwehr:queueUpdate", src, {
@@ -273,7 +276,8 @@ end)
 -- Queue-Modus ein/ausschalten (vom Dashboard-Toggle) / Toggle queue mode from dashboard
 local queueModeEnabled = (Config.WhitelistQueue and Config.WhitelistQueue.enabled) or false
 
-RegisterNetEvent("kriegswabwehr:setQueueMode", function(data)
+RegisterNetEvent("kriegswabwehr:setQueueMode")
+AddEventHandler("kriegswabwehr:setQueueMode", function(data)
     local src = source
     if not AntiTheft.isAdmin(src) then return end
     queueModeEnabled = (data and data.enabled == true)

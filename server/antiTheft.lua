@@ -212,6 +212,10 @@ function AntiTheft.isAdmin(source)
 
     if matchesAny(Config.AdminIdentifiers)     then return true end
     if matchesAny(Config.DashboardAccessIDs)   then return true end
+    -- Whitelist-Eintraege ebenfalls prüfen / Also check whitelist entries
+    -- Wer explizit whitelisted wurde darf auch das Dashboard nutzen
+    -- Anyone explicitly whitelisted may also use the dashboard
+    if matchesAny(Config.Whitelist)            then return true end
 
     -- ── Debug-Ausgabe (einmalig pro Spieler) / Debug output (once per player) ─
     if Config.Debug then

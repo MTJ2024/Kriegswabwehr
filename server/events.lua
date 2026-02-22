@@ -130,6 +130,12 @@ local criticalESXEvents = {
 local criticalEventCounters = {}
 
 local function checkCriticalEvent(source, eventName)
+    -- Server-interne Events ignorieren (source <= 0 oder kein Spieler)
+    -- Ignore server-internal events (source <= 0 or no player)
+    if not source or source <= 0 or GetPlayerName(source) == nil then
+        return true  -- kein echter Spieler, Event durchlassen / not a real player, allow event
+    end
+
     local key = source .. "_" .. eventName
     local now = os.time()
 
@@ -164,7 +170,10 @@ for _, eventName in ipairs(criticalESXEvents) do
     local eName = eventName  -- Closure-Variable / closure variable
     AddEventHandler(eName, function(...)
         local src = source
-        if src and src ~= 0 then
+        -- Nur echte verbundene Spieler prüfen / Only check real connected players
+        -- source=-1 = server-internes Event (z.B. von anderen Ressourcen) -> ignorieren
+        -- source=-1 = server-internal event (e.g. from other resources) -> ignore
+        if src and src > 0 and GetPlayerName(src) ~= nil then
             if not checkCriticalEvent(src, eName) then
                 -- Kritischen Event-Flood melden / Report critical event flood
                 handleEventViolation(src, eName)

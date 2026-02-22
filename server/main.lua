@@ -778,7 +778,8 @@ end)
 -- Dashboard-API / Dashboard API
 -- ─────────────────────────────────────────────────────────────────────────────
 
-RegisterNetEvent("kriegswabwehr:requestStats", function()
+RegisterNetEvent("kriegswabwehr:requestStats")
+AddEventHandler("kriegswabwehr:requestStats", function()
     local src = source
     if not AntiTheft.isAdmin(src) then
         -- Gib Fehlerstatus zurück damit NUI "Kein Zugriff" anzeigen kann
@@ -833,7 +834,8 @@ RegisterNetEvent("kriegswabwehr:requestStats", function()
     end
 end)
 
-RegisterNetEvent("kriegswabwehr:getBanList", function()
+RegisterNetEvent("kriegswabwehr:getBanList")
+AddEventHandler("kriegswabwehr:getBanList", function()
     local src = source
     if not AntiTheft.isAdmin(src) then return end
     TriggerClientEvent("kriegswabwehr:banListResponse", src, {
@@ -842,7 +844,8 @@ RegisterNetEvent("kriegswabwehr:getBanList", function()
     })
 end)
 
-RegisterNetEvent("kriegswabwehr:unbanIP", function(ip)
+RegisterNetEvent("kriegswabwehr:unbanIP")
+AddEventHandler("kriegswabwehr:unbanIP", function(ip)
     local src = source
     if not AntiTheft.isAdmin(src) then return end
     local success = IPBlocker.unban(ip)
@@ -854,7 +857,8 @@ end)
 -- Whitelist-API fuer Dashboard / Whitelist API for dashboard
 -- ─────────────────────────────────────────────────────────────────────────────
 
-RegisterNetEvent("kriegswabwehr:getWhitelist", function()
+RegisterNetEvent("kriegswabwehr:getWhitelist")
+AddEventHandler("kriegswabwehr:getWhitelist", function()
     local src = source
     if not AntiTheft.isAdmin(src) then return end
     local entries = {}
@@ -870,7 +874,8 @@ RegisterNetEvent("kriegswabwehr:getWhitelist", function()
     TriggerClientEvent("kriegswabwehr:whitelistResponse", src, { entries = entries })
 end)
 
-RegisterNetEvent("kriegswabwehr:addWhitelist", function(data)
+RegisterNetEvent("kriegswabwehr:addWhitelist")
+AddEventHandler("kriegswabwehr:addWhitelist", function(data)
     local src = source
     if not AntiTheft.isAdmin(src) then return end
     if not data or not data.identifier then return end
@@ -884,7 +889,8 @@ RegisterNetEvent("kriegswabwehr:addWhitelist", function(data)
     })
 end)
 
-RegisterNetEvent("kriegswabwehr:removeWhitelist", function(data)
+RegisterNetEvent("kriegswabwehr:removeWhitelist")
+AddEventHandler("kriegswabwehr:removeWhitelist", function(data)
     local src = source
     if not AntiTheft.isAdmin(src) then return end
     if not data or not data.identifier then return end
@@ -975,7 +981,8 @@ end, true)
 -- Log-Persistenz-API fuer Dashboard / Log persistence API for dashboard
 -- ─────────────────────────────────────────────────────────────────────────────
 
-RegisterNetEvent("kriegswabwehr:getLogDates", function()
+RegisterNetEvent("kriegswabwehr:getLogDates")
+AddEventHandler("kriegswabwehr:getLogDates", function()
     local src = source
     if not AntiTheft.isAdmin(src) then return end
     TriggerClientEvent("kriegswabwehr:logDatesResponse", src, {
@@ -983,7 +990,8 @@ RegisterNetEvent("kriegswabwehr:getLogDates", function()
     })
 end)
 
-RegisterNetEvent("kriegswabwehr:getLogByDate", function(data)
+RegisterNetEvent("kriegswabwehr:getLogByDate")
+AddEventHandler("kriegswabwehr:getLogByDate", function(data)
     local src = source
     if not AntiTheft.isAdmin(src) then return end
     local dateKey = data and data.key
@@ -994,7 +1002,8 @@ RegisterNetEvent("kriegswabwehr:getLogByDate", function(data)
     })
 end)
 
-RegisterNetEvent("kriegswabwehr:extendLogRetention", function(data)
+RegisterNetEvent("kriegswabwehr:extendLogRetention")
+AddEventHandler("kriegswabwehr:extendLogRetention", function(data)
     local src = source
     if not AntiTheft.isAdmin(src) then return end
     local dateKey   = data and data.key
@@ -1011,7 +1020,8 @@ RegisterNetEvent("kriegswabwehr:extendLogRetention", function(data)
     })
 end)
 
-RegisterNetEvent("kriegswabwehr:exportLog", function(data)
+RegisterNetEvent("kriegswabwehr:exportLog")
+AddEventHandler("kriegswabwehr:exportLog", function(data)
     local src = source
     if not AntiTheft.isAdmin(src) then return end
     local dateKey = data and data.key
