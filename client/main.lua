@@ -11,10 +11,9 @@
 local dashboardOpen = false
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- Dashboard öffnen / Open dashboard
+-- Dashboard öffnen (lokal) / Open dashboard (local helper)
 -- ─────────────────────────────────────────────────────────────────────────────
-
-RegisterNetEvent("kriegswabwehr:openDashboard", function()
+local function openDashboardLocal()
     if dashboardOpen then return end
     dashboardOpen = true
     SetNuiFocus(true, true)
@@ -22,21 +21,30 @@ RegisterNetEvent("kriegswabwehr:openDashboard", function()
     -- Erste Datensatz sofort anfordern / Request first dataset immediately
     TriggerServerEvent("kriegswabwehr:requestStats")
     TriggerServerEvent("kriegswabwehr:getBanList")
+end
+
+-- Vom Server geöffnet / Opened by server
+RegisterNetEvent("kriegswabwehr:openDashboard")
+AddEventHandler("kriegswabwehr:openDashboard", function()
+    openDashboardLocal()
 end)
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Server-Daten -> NUI / Forward server data to NUI
 -- ─────────────────────────────────────────────────────────────────────────────
 
-RegisterNetEvent("kriegswabwehr:statsResponse", function(data)
+RegisterNetEvent("kriegswabwehr:statsResponse")
+AddEventHandler("kriegswabwehr:statsResponse", function(data)
     SendNUIMessage({ type = "statsUpdate", data = data })
 end)
 
-RegisterNetEvent("kriegswabwehr:banListResponse", function(data)
+RegisterNetEvent("kriegswabwehr:banListResponse")
+AddEventHandler("kriegswabwehr:banListResponse", function(data)
     SendNUIMessage({ type = "banListUpdate", data = data })
 end)
 
-RegisterNetEvent("kriegswabwehr:unbanResult", function(data)
+RegisterNetEvent("kriegswabwehr:unbanResult")
+AddEventHandler("kriegswabwehr:unbanResult", function(data)
     SendNUIMessage({ type = "unbanResult", data = data })
 end)
 
@@ -73,12 +81,14 @@ end)
 -- ─────────────────────────────────────────────────────────────────────────────
 
 -- Live-Queue-Update vom Server / Live queue update from server
-RegisterNetEvent("kriegswabwehr:queueUpdate", function(data)
+RegisterNetEvent("kriegswabwehr:queueUpdate")
+AddEventHandler("kriegswabwehr:queueUpdate", function(data)
     SendNUIMessage({ type = "queueUpdate", data = data })
 end)
 
 -- Ergebnis einer Queue-Aktion / Result of a queue action
-RegisterNetEvent("kriegswabwehr:queueActionResult", function(data)
+RegisterNetEvent("kriegswabwehr:queueActionResult")
+AddEventHandler("kriegswabwehr:queueActionResult", function(data)
     SendNUIMessage({ type = "queueActionResult", data = data })
 end)
 
@@ -107,7 +117,8 @@ RegisterNUICallback("getWhitelist", function(data, cb)
 end)
 
 -- Whitelist-Antwort vom Server / Whitelist response from server
-RegisterNetEvent("kriegswabwehr:whitelistResponse", function(data)
+RegisterNetEvent("kriegswabwehr:whitelistResponse")
+AddEventHandler("kriegswabwehr:whitelistResponse", function(data)
     SendNUIMessage({ type = "whitelistResponse", data = data })
 end)
 
@@ -128,7 +139,8 @@ RegisterNUICallback("removeWhitelist", function(data, cb)
 end)
 
 -- Whitelist-Aktion-Ergebnis / Whitelist action result
-RegisterNetEvent("kriegswabwehr:whitelistActionResult", function(data)
+RegisterNetEvent("kriegswabwehr:whitelistActionResult")
+AddEventHandler("kriegswabwehr:whitelistActionResult", function(data)
     SendNUIMessage({ type = "whitelistActionResult", data = data })
 end)
 
@@ -156,19 +168,23 @@ RegisterNUICallback("exportLog", function(data, cb)
     cb({})
 end)
 
-RegisterNetEvent("kriegswabwehr:logDatesResponse", function(data)
+RegisterNetEvent("kriegswabwehr:logDatesResponse")
+AddEventHandler("kriegswabwehr:logDatesResponse", function(data)
     SendNUIMessage({ type = "logDatesResponse", data = data })
 end)
 
-RegisterNetEvent("kriegswabwehr:logByDateResponse", function(data)
+RegisterNetEvent("kriegswabwehr:logByDateResponse")
+AddEventHandler("kriegswabwehr:logByDateResponse", function(data)
     SendNUIMessage({ type = "logByDateResponse", data = data })
 end)
 
-RegisterNetEvent("kriegswabwehr:logRetentionResult", function(data)
+RegisterNetEvent("kriegswabwehr:logRetentionResult")
+AddEventHandler("kriegswabwehr:logRetentionResult", function(data)
     SendNUIMessage({ type = "logRetentionResult", data = data })
 end)
 
-RegisterNetEvent("kriegswabwehr:logExportResponse", function(data)
+RegisterNetEvent("kriegswabwehr:logExportResponse")
+AddEventHandler("kriegswabwehr:logExportResponse", function(data)
     SendNUIMessage({ type = "logExportResponse", data = data })
 end)
 
@@ -197,7 +213,7 @@ end)
 -- ─────────────────────────────────────────────────────────────────────────────
 
 RegisterCommand("kwdashboard", function()
-    TriggerEvent("kriegswabwehr:openDashboard")
+    openDashboardLocal()
 end, false)
 
 TriggerEvent("chat:addSuggestion", "/kwdashboard", "Kriegswabwehr Admin-Dashboard öffnen (nur Admins)")

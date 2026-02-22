@@ -162,14 +162,17 @@ end
 
 -- Prüft ob ein Spieler Admin-Rechte hat
 -- Checks whether a player has admin rights
--- Ebene 1: ACE/txAdmin | Ebene 2: Config.AdminIdentifiers
+-- Ebene 1: ACE (txAdmin-Standard-Gruppen + eigene) | Ebene 2: Config.AdminIdentifiers
+-- Level 1: ACE (txAdmin default groups + custom) | Level 2: Config.AdminIdentifiers
 function AntiTheft.isAdmin(source)
     if not source or source == 0 then return false end
-    -- ACE-Recht prüfen (txAdmin, server.cfg) / Check ACE permission
-    if IsPlayerAceAllowed(tostring(source), "kriegswabwehr.admin") then
-        return true
-    end
-    -- Config-Fallback / Config fallback
+    local src = tostring(source)
+    -- txAdmin Standard-Gruppen / txAdmin default groups (group.admin, group.superadmin)
+    if IsPlayerAceAllowed(src, "group.admin")      then return true end
+    if IsPlayerAceAllowed(src, "group.superadmin") then return true end
+    -- Eigenes ACE-Recht / Custom ACE permission
+    if IsPlayerAceAllowed(src, "kriegswabwehr.admin") then return true end
+    -- Config-Fallback (Steam/License/Discord-IDs) / Config fallback
     local identifiers = GetPlayerIdentifiers(source)
     for _, adminId in ipairs(Config.AdminIdentifiers or {}) do
         for _, playerId in ipairs(identifiers or {}) do
