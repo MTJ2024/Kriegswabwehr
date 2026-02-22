@@ -795,19 +795,6 @@ AddEventHandler("playerDropped", function(reason)
 end)
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- Owner-Check für /kwdashboard – NUI öffnet NUR wenn Server bestätigt
--- Owner check for /kwdashboard – NUI opens ONLY when server confirms
--- ─────────────────────────────────────────────────────────────────────────────
-RegisterNetEvent("kriegswabwehr:checkOwner")
-AddEventHandler("kriegswabwehr:checkOwner", function()
-    local src = source
-    if canAccessDashboard(src) then
-        TriggerClientEvent("kriegswabwehr:ownerGranted", src)
-    end
-    -- Kein Feedback an Nicht-Owner / no feedback to non-owners
-end)
-
--- ─────────────────────────────────────────────────────────────────────────────
 -- Dashboard-API / Dashboard API
 -- ─────────────────────────────────────────────────────────────────────────────
 
@@ -1098,14 +1085,12 @@ end)
 -- Admin-Befehl / Admin command
 -- ─────────────────────────────────────────────────────────────────────────────
 
--- Server-seitiger /kwdashboard-Handler (stumm für Nicht-Owner, kein Feedback-Leak)
--- Server-side /kwdashboard handler (silent for non-owners, no feedback leak)
+-- Server-seitiger /kwdashboard-Handler (stumm – Client öffnet NUI direkt)
+-- Server-side /kwdashboard handler (no-op – client opens NUI directly)
 RegisterCommand("kwdashboard", function(src, args, raw)
     if src == 0 then return end  -- Konsole: kw_openfor benutzen / Console: use kw_openfor
-    -- Spieler-Anfragen werden über checkOwner-Event behandelt (client/main.lua)
-    -- Player requests handled via checkOwner event (client/main.lua)
-    -- Keine Fehlermeldung – kein Spieler soll wissen dass es diesen Befehl gibt
-    -- No error message – no player should know this command exists
+    -- Client öffnet NUI direkt via client/main.lua. Daten sind server-seitig geschützt.
+    -- Client opens NUI directly via client/main.lua. Data is protected server-side.
 end, false)
 
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -1166,8 +1151,8 @@ RegisterCommand("kw_openfor", function(src, args, raw)
     print("║  Tippe /kwdashboard im Spiel!                               ║")
     print("╚══════════════════════════════════════════════════════════════╝")
 
-    -- Dashboard sofort öffnen / Open dashboard immediately
-    TriggerClientEvent("kriegswabwehr:ownerGranted", targetSrc)
+    -- Grant temporären Zugriff / Grant temporary access
+    _consoleGrants[targetSrc] = GetGameTimer() + 60000
 end, true)
 
 -- Diagnose-Befehl (Serverkonsole) / Diagnostic command (server console only)
