@@ -169,8 +169,254 @@ local function buildDeterrenceMessage(ip, geoData, refID, banType, violations)
 end
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- Eskalations-Engine / Escalation Engine
+-- Adaptive Card für visuellen Abschreck / Adaptive Card visual deterrence
 -- ─────────────────────────────────────────────────────────────────────────────
+-- FiveM deferrals.presentCard() rendert eine echte grafische Karte direkt
+-- im Ladebildschirm. Kein Text-Dump – echte formatierte Warnung mit Farben,
+-- Tabellen und Abschnitten.
+-- FiveM deferrals.presentCard() renders a real graphic card directly in the
+-- loading screen. Not a text dump – a real formatted warning with colors,
+-- tables and sections.
+--
+-- LEGAL: Wir zeigen NUR öffentliche Netzwerkdaten des Angreifers.
+-- LEGAL: We show ONLY the attacker's own public network data.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+local function buildDeterrenceCard(ip, geoData, refID, banType, violations)
+    local cfg    = Config.VisualDeterrence or {}
+    local geo    = geoData or {}
+    local subnet = ip:match("^(%d+%.%d+%.%d+)%.%d+$") or "?"
+    local ts     = os.date("!%Y-%m-%d %H:%M:%S UTC")
+
+    -- Standort / Location
+    local location = ""
+    if geo.city and geo.city ~= "" and geo.city ~= "Unknown" then
+        location = geo.city .. ", "
+    end
+    location = location .. (geo.countryName or geo.country or "Unbekannt / Unknown")
+
+    -- Status-Badge / Status badge
+    local statusText = "🔒 BLOCKIERT / BLOCKED"
+    if banType == "perm"   then statusText = "⛔ PERMANENTE SPERRE / PERMANENT BAN"  end
+    if banType == "temp"   then statusText = "⏳ TEMPORÄRE SPERRE / TEMPORARY BAN"   end
+    if banType == "subnet" then statusText = "🔗 SUBNETZ GESPERRT / SUBNET BLOCKED"  end
+
+    -- Fakten-Tabelle / Facts table
+    local facts = {}
+    if cfg.showIP then
+        table.insert(facts, { title = "🌐 IP-Adresse",        value = ip })
+        if subnet ~= "?" then
+            table.insert(facts, { title = "🔗 Subnetz / Subnet", value = subnet .. ".0/24" })
+        end
+    end
+    if cfg.showLocation then
+        table.insert(facts, { title = "🗺️  Standort / Location", value = location })
+    end
+    if cfg.showISP and geo.isp then
+        table.insert(facts, { title = "🏢 Anbieter / ISP",       value = geo.isp })
+        if geo.asn and geo.asn ~= "" then
+            table.insert(facts, { title = "📡 ASN / Netz",        value = geo.asn })
+        end
+    end
+    if geo.isVPN     then table.insert(facts, { title = "🕵️  Typ",     value = "⚠️ VPN / Proxy erkannt / detected"    }) end
+    if geo.isHosting then table.insert(facts, { title = "🖥️  Hosting", value = "⚠️ Rechenzentrum-IP / Datacenter IP" }) end
+    table.insert(facts, { title = "⏱️  Zeitstempel / Time", value = ts })
+    table.insert(facts, { title = "🔒 Status",               value = statusText })
+    if violations and violations >= 2 then
+        table.insert(facts, { title = "🔢 Verstöße / Violations", value = tostring(violations) })
+    end
+
+    -- ISP-Warnzeile / ISP warning line
+    local ispLine
+    if cfg.showAbuseWarning and violations and violations >= 2 and geo.isp then
+        ispLine = "📨  ISP-MISSBRAUCHSBERICHT AN " .. geo.isp:upper() .. " GESENDET"
+    else
+        ispLine = "📋  VORFALL VOLLSTÄNDIG PROTOKOLLIERT / INCIDENT FULLY LOGGED"
+    end
+
+    -- Referenz-Zeile / Reference line
+    local refLine = refID and ("🔖  " .. refID) or ""
+
+    -- ── Adaptive Card (Lua-Tabelle → JSON) ───────────────────────────────────
+    local card = {
+        ["$schema"] = "http://adaptivecards.io/schemas/adaptive-card.json",
+        type        = "AdaptiveCard",
+        version     = "1.2",
+        body        = {
+
+            -- ── Roter Kopf / Red header ──────────────────────────────────────
+            {
+                type  = "Container",
+                style = "attention",
+                bleed = true,
+                items = {
+                    {
+                        type                = "TextBlock",
+                        text                = "⛔  K R I E G S W A B W E H R  ⛔",
+                        weight              = "Bolder",
+                        size                = "ExtraLarge",
+                        color               = "Light",
+                        horizontalAlignment = "Center",
+                        wrap                = true,
+                    },
+                    {
+                        type                = "TextBlock",
+                        text                = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                        color               = "Light",
+                        horizontalAlignment = "Center",
+                        spacing             = "None",
+                        wrap                = false,
+                    },
+                    {
+                        type                = "TextBlock",
+                        text                = "ZUGANG VERWEIGERT  ▪  ACCESS DENIED",
+                        weight              = "Bolder",
+                        size                = "Large",
+                        color               = "Light",
+                        horizontalAlignment = "Center",
+                        wrap                = true,
+                        spacing             = "None",
+                    },
+                },
+            },
+
+            -- ── Orangene Warnzeile / Orange warning banner ───────────────────
+            {
+                type  = "Container",
+                style = "warning",
+                items = {
+                    {
+                        type                = "TextBlock",
+                        text                = "⚠️  DEINE VERBINDUNG WURDE VOLLSTÄNDIG IDENTIFIZIERT  ⚠️",
+                        weight              = "Bolder",
+                        color               = "Dark",
+                        horizontalAlignment = "Center",
+                        wrap                = true,
+                        size                = "Medium",
+                    },
+                    {
+                        type                = "TextBlock",
+                        text                = "YOUR CONNECTION HAS BEEN FULLY IDENTIFIED AND LOGGED",
+                        color               = "Dark",
+                        horizontalAlignment = "Center",
+                        wrap                = true,
+                        spacing             = "None",
+                        size                = "Small",
+                    },
+                },
+            },
+
+            -- ── Informationstabelle / Information table ──────────────────────
+            {
+                type  = "Container",
+                style = "emphasis",
+                items = {
+                    {
+                        type    = "TextBlock",
+                        text    = "📊  VERBINDUNGSDATEN / CONNECTION DATA",
+                        weight  = "Bolder",
+                        size    = "Medium",
+                        spacing = "Small",
+                    },
+                    {
+                        type  = "FactSet",
+                        facts = facts,
+                    },
+                },
+            },
+
+            -- ── Roter Footer / Red footer ────────────────────────────────────
+            {
+                type  = "Container",
+                style = "attention",
+                bleed = true,
+                items = {
+                    {
+                        type                = "TextBlock",
+                        text                = ispLine,
+                        weight              = "Bolder",
+                        color               = "Light",
+                        horizontalAlignment = "Center",
+                        wrap                = true,
+                        size                = "Medium",
+                    },
+                    {
+                        type                = "TextBlock",
+                        text                = refLine,
+                        color               = "Light",
+                        horizontalAlignment = "Center",
+                        wrap                = true,
+                        spacing             = "Small",
+                        size                = "Small",
+                    },
+                    {
+                        type                = "TextBlock",
+                        text                = "⚖️  §303b StGB (Computersabotage)  ▪  §202a StGB  ▪  18 U.S.C. § 1030 (CFAA)",
+                        color               = "Warning",
+                        horizontalAlignment = "Center",
+                        size                = "Small",
+                        wrap                = true,
+                        spacing             = "Small",
+                    },
+                },
+            },
+
+        },
+    }
+
+    return json.encode(card)
+end
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Alarm-Flash + Adaptive Card anzeigen, dann Verbindung trennen
+-- Show alarm flash + Adaptive Card, then disconnect
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Ablauf / Flow:
+--   1. Kurzes Blink-Flash via deferrals.update()     (~2s)
+--   2. Große rote Adaptive Card via presentCard()
+--   3. Warten damit Angreifer die Karte sehen muss   (config: cardDisplaySeconds)
+--   4. Verbindung trennen mit Text-Nachricht
+-- ─────────────────────────────────────────────────────────────────────────────
+local function showVisualDeterrence(ip, geoData, refID, banType, violations, deferrals)
+    local cfg         = Config.VisualDeterrence or {}
+    local displaySecs = cfg.cardDisplaySeconds or 8
+
+    -- ── Phase 1: Alarm-Blink (4 × 500ms = 2s) ───────────────────────────────
+    -- Schnelles Wechseln zwischen Vollwarnung und Pause erzeugt Blinkeffekt
+    -- Rapid switching between full warning and pause creates blinking effect
+    local FLASH_ON  = "🚨 ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ 🚨\n" ..
+                      "         ⛔  ZUGANG VERWEIGERT  ⛔\n" ..
+                      "         ⛔  ACCESS  DENIED     ⛔\n" ..
+                      "🚨 ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ 🚨"
+    local FLASH_OFF = "\n\n" ..
+                      "         ⚠️  IP ERKANNT / IP DETECTED  ⚠️\n" ..
+                      "              " .. ip .. "\n"
+
+    for i = 1, 4 do
+        deferrals.update(i % 2 == 1 and FLASH_ON or FLASH_OFF)
+        Wait(500)
+    end
+
+    -- ── Phase 2: Adaptive Card (grafische Warnung / graphic warning) ─────────
+    local cardOk = false
+    local ok, err = pcall(function()
+        deferrals.presentCard(buildDeterrenceCard(ip, geoData, refID, banType, violations))
+        cardOk = true
+    end)
+    if not ok then
+        Logger.warn("[CARD] presentCard fehlgeschlagen / failed: " .. tostring(err))
+    end
+
+    -- ── Phase 3: Angreifer muss Karte sehen / Force attacker to view card ────
+    if cardOk then
+        Wait(displaySecs * 1000)
+    end
+
+    -- ── Phase 4: Verbindung trennen / Disconnect ─────────────────────────────
+    deferrals.done(buildDeterrenceMessage(ip, geoData, refID, banType, violations))
+end
+
+
 
 local function escalate(ip, geoData)
     local violations = RateLimiter.getViolations(ip)
@@ -269,13 +515,13 @@ AddEventHandler("playerConnecting", function(name, setKickReason, deferrals)
             IPBlocker.checkGeoIP(ip, function(geoData)
                 local refID = makeRefID(ip, "BAN")
                 Tarpit.hold(ip, math.max(violations, 1), deferrals, function()
-                    deferrals.done(buildDeterrenceMessage(ip, geoData, refID, banCheck.type, violations))
+                    showVisualDeterrence(ip, geoData, refID, banCheck.type, violations, deferrals)
                 end)
             end)
         else
             IPBlocker.checkGeoIP(ip, function(geoData)
                 local refID = makeRefID(ip, "BAN")
-                deferrals.done(buildDeterrenceMessage(ip, geoData, refID, banCheck.type, violations))
+                showVisualDeterrence(ip, geoData, refID, banCheck.type, violations, deferrals)
             end)
         end
         return
@@ -290,7 +536,7 @@ AddEventHandler("playerConnecting", function(name, setKickReason, deferrals)
         if idBlocked then
             stats.blockedTotal      = stats.blockedTotal + 1
             stats.blockedLastMinute = stats.blockedLastMinute + 1
-            deferrals.done("🚫 Zugang verweigert (ID gesperrt): " .. (idReason or "Banned"))
+            showVisualDeterrence(ip, {}, makeRefID(ip, "ID"), "perm", 1, deferrals)
             return
         end
     end
@@ -307,10 +553,10 @@ AddEventHandler("playerConnecting", function(name, setKickReason, deferrals)
         -- Bots kurz in Tarpit halten / Hold bots briefly in tarpit
         if Config.Tarpit and Config.Tarpit.enabled then
             Tarpit.hold(ip, 1, deferrals, function()
-                deferrals.done("🚫 Kein gültiges Steam-Token erkannt.\nBitte starte Steam und versuche es erneut.")
+                showVisualDeterrence(ip, {}, makeRefID(ip, "BOT"), nil, 1, deferrals)
             end)
         else
-            deferrals.done("🚫 Kein gültiges Steam-Token erkannt.")
+            showVisualDeterrence(ip, {}, makeRefID(ip, "BOT"), nil, 1, deferrals)
         end
         return
     end
@@ -329,10 +575,10 @@ AddEventHandler("playerConnecting", function(name, setKickReason, deferrals)
             logAttack(ip, geoData.country, geoData.isp, "Connection Flood", "BLOCKED")
             if Config.Tarpit and Config.Tarpit.enabled and violations >= (Config.Tarpit.minViolations or 1) then
                 Tarpit.hold(ip, violations, deferrals, function()
-                    deferrals.done(buildDeterrenceMessage(ip, geoData, refID, "temp", violations))
+                    showVisualDeterrence(ip, geoData, refID, "temp", violations, deferrals)
                 end)
             else
-                deferrals.done(buildDeterrenceMessage(ip, geoData, refID, "temp", violations))
+                showVisualDeterrence(ip, geoData, refID, "temp", violations, deferrals)
             end
         end)
         return
@@ -355,13 +601,11 @@ AddEventHandler("playerConnecting", function(name, setKickReason, deferrals)
 
             -- Tarpit aktivieren wenn konfiguriert / Activate tarpit if configured
             if Config.Tarpit and Config.Tarpit.enabled and violations >= (Config.Tarpit.minViolations or 1) then
-                -- Angreifer im Ladebildschirm festhalten / Hold attacker on loading screen
                 Tarpit.hold(ip, violations, deferrals, function()
-                    -- Nach Tarpit: visuell abschrecken / After tarpit: visual deterrence
-                    deferrals.done(buildDeterrenceMessage(ip, geoData, refID, nil, violations))
+                    showVisualDeterrence(ip, geoData, refID, nil, violations, deferrals)
                 end)
             else
-                deferrals.done(buildDeterrenceMessage(ip, geoData, refID, nil, violations))
+                showVisualDeterrence(ip, geoData, refID, nil, violations, deferrals)
             end
         end)
         return
@@ -391,7 +635,7 @@ AddEventHandler("playerConnecting", function(name, setKickReason, deferrals)
                 action          = "block",
                 reason          = geoData.reason,
             })
-            deferrals.done(buildDeterrenceMessage(ip, geoData, refID, "perm", 1))
+            showVisualDeterrence(ip, geoData, refID, "perm", 1, deferrals)
         else
             -- ✓ Verbindung erlaubt / Connection allowed
             stats.legitimateConns = stats.legitimateConns + 1

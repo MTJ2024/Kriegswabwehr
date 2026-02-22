@@ -199,6 +199,9 @@ Config.VisualDeterrence = {
     showAbuseWarning = true,
     -- Referenz-ID für Strafanzeige anzeigen / Show reference ID for police report
     showRefID = true,
+    -- Anzeigedauer der Adaptive Card in Sekunden (Angreifer muss warten)
+    -- Display duration of the Adaptive Card in seconds (attacker must wait)
+    cardDisplaySeconds = 8,
 }
 
 -- ─────────────────────────────────────────────────────────────────────────────
