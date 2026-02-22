@@ -28,6 +28,7 @@ function openDashboard() {
     state.open = true;
     document.getElementById('dashboard').classList.remove('hidden');
     startClock();
+    dbgLog('dbg-ok', 'openDashboard() aufgerufen – NUI sichtbar / visible');
     nuiFetch('requestStats');
     nuiFetch('getBanList');
     nuiFetch('getQueue');
@@ -76,7 +77,10 @@ function switchTab(name) {
 
     // Activate selected
     const pane = document.getElementById('tab-' + name);
-    if (pane) pane.classList.add('active');
+    if (pane) {
+        pane.classList.add('active');
+        pane.classList.remove('hidden');  // fix: .hidden has !important, must remove it
+    }
     const item = document.querySelector('[data-tab="' + name + '"]');
     if (item) item.classList.add('active');
 
@@ -94,7 +98,11 @@ let _statsReceived = false;
 let _statsTimeoutId = null;
 
 function applyStats(data) {
-    if (!data) return;
+    if (!data) { dbgLog('dbg-err', 'applyStats: data=null'); return; }
+    dbgLog('dbg-ok', 'applyStats: players=' + (data.players||0) +
+        ' blocked=' + (data.blockedLastMinute||0) +
+        ' notAdmin=' + (!!data._notAdmin) +
+        ' error=' + (!!data._error));
 
     // Clear pending "no data" timeout
     if (_statsTimeoutId) { clearTimeout(_statsTimeoutId); _statsTimeoutId = null; }
@@ -481,10 +489,46 @@ function esc(str) {
         .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// ── Debug logger ──────────────────────────────────────────────────────────────
+// Sichtbares Debug-Panel im Dashboard – zeigt alle NUI-Nachrichten
+// Visible debug panel inside the dashboard – logs all NUI messages
+const KW_DEBUG = true;   // wird automatisch false wenn Config.Debug=false im Server
+let _debugCount = 0;
+
+function dbgLog(cls, text) {
+    console.log('[KW DEBUG NUI] ' + text);
+    const panel = document.getElementById('debug-log');
+    if (!panel) return;
+    _debugCount++;
+    const ts   = new Date().toLocaleTimeString('de-DE', {hour12:false});
+    const line = document.createElement('div');
+    line.className = 'dbg-line';
+    line.innerHTML = '<span class="dbg-ts">' + ts + '</span> ' +
+                     '<span class="' + cls + '">' +
+                     text.replace(/</g,'&lt;').replace(/>/g,'&gt;') +
+                     '</span>';
+    panel.appendChild(line);
+    // Max 80 Zeilen behalten / keep max 80 lines
+    while (panel.children.length > 80) panel.removeChild(panel.firstChild);
+    panel.scrollTop = panel.scrollHeight;
+}
+
 // ── FiveM message listener ────────────────────────────────────────────────────
 window.addEventListener('message', function(event) {
     const msg = event.data;
     if (!msg || !msg.type) return;
+
+    // Debug: jede Nachricht loggen / log every message
+    if (KW_DEBUG) {
+        const summary = msg.type +
+            (msg.data && msg.data._notAdmin ? ' [NOT_ADMIN]' : '') +
+            (msg.data && msg.data._error    ? ' [ERROR:' + String(msg.data._error).substring(0,40) + ']' : '') +
+            (msg.data && msg.data.players !== undefined ? ' players=' + msg.data.players : '') +
+            (msg.data && msg.data.bans      ? ' bans=' + (msg.data.bans.length || 0) : '');
+        const cls = msg.data && (msg.data._notAdmin || msg.data._error) ? 'dbg-err' :
+                    msg.type === 'open' ? 'dbg-ok' : 'dbg-inf';
+        dbgLog(cls, 'MSG: ' + summary);
+    }
 
     switch (msg.type) {
         case 'open':

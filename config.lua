@@ -130,7 +130,7 @@ Config.DashboardAccessIDs = {
 -- Debug mode: print admin check diagnostics to console
 -- Auf true setzen um Verbindungsprobleme zu diagnostizieren
 -- Set to true to diagnose access problems
-Config.Debug = false
+Config.Debug = true   -- DEBUG: vorübergehend aktiviert / temporarily enabled
 
 -- Admin-Dashboard-Freigabe über NUI / Admin dashboard via NUI
 Config.AdminDashboardEnabled = true

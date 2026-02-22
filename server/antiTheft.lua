@@ -178,54 +178,69 @@ end
 -- Ebene 1: ACE (txAdmin-Standard-Gruppen + eigene) | Ebene 2: Identifier-Listen
 -- Level 1: ACE (txAdmin default groups + custom)   | Level 2: Identifier lists
 function AntiTheft.isAdmin(source)
-    if not source or source == 0 then return false end
-    local src = tostring(source)
+    if not source or source == 0 then
+        if Config.Debug then print("[KW DEBUG] isAdmin: source=nil/0 -> false") end
+        return false
+    end
+    local src  = tostring(source)
+    local name = tostring(GetPlayerName(source) or "?")
+
+    -- ── DEBUG: zeigt alle Prüfschritte / shows every check step ───────────────
+    local function dbg(msg)
+        if Config.Debug then
+            print(string.format("[KW DEBUG isAdmin] src=%s name=%s | %s", src, name, msg))
+        end
+    end
 
     -- ── ACE-Prüfungen / ACE checks ────────────────────────────────────────────
-    -- txAdmin setzt group.admin + group.superadmin als ACE-Gruppen
-    -- txAdmin sets group.admin + group.superadmin as ACE groups
-    if IsPlayerAceAllowed(src, "group.admin")      then return true end
-    if IsPlayerAceAllowed(src, "group.superadmin") then return true end
-    -- Eigenes ACE / Custom ACE
-    if IsPlayerAceAllowed(src, "kriegswabwehr.admin") then return true end
-    -- txAdmin grants these to all admins via group.admin – reliable fallback
-    -- txAdmin vergibt diese an alle Admins über group.admin – zuverlässiger Fallback
-    if IsPlayerAceAllowed(src, "command.ban")  then return true end
-    if IsPlayerAceAllowed(src, "command.kick") then return true end
+    local aceChecks = {
+        "group.admin", "group.superadmin", "kriegswabwehr.admin",
+        "command.ban", "command.kick",
+    }
+    for _, ace in ipairs(aceChecks) do
+        local ok = IsPlayerAceAllowed(src, ace)
+        dbg(string.format("ACE[%s] = %s", ace, tostring(ok)))
+        if ok then
+            dbg("-> ZUGANG ERLAUBT via ACE / ACCESS GRANTED via ACE: " .. ace)
+            return true
+        end
+    end
 
     -- ── Identifier-Prüfungen / Identifier checks ─────────────────────────────
     local identifiers = GetPlayerIdentifiers(source) or {}
     local rawEP = GetPlayerEndpoint(tostring(source)) or ""
     local ipKey = "ip:" .. (rawEP:match("^([^:]+)") or "")
 
-    local function matchesAny(list)
+    dbg(string.format("IP-Key=%s | Identifier=%s", ipKey, table.concat(identifiers, ", ")))
+
+    local function matchesAny(listName, list)
         for _, adminId in ipairs(list or {}) do
-            -- Direkte IP-Prüfung / Direct IP check
-            if adminId == ipKey then return true end
-            -- Identifier-Vergleich / Identifier comparison
+            if adminId == ipKey then
+                dbg(string.format("-> MATCH %s IP '%s' == '%s'", listName, adminId, ipKey))
+                return true
+            end
             for _, playerId in ipairs(identifiers) do
-                if playerId == adminId then return true end
+                if playerId == adminId then
+                    dbg(string.format("-> MATCH %s '%s' == '%s'", listName, adminId, playerId))
+                    return true
+                end
             end
         end
+        dbg(string.format("-> KEIN TREFFER in %s / NO MATCH in %s", listName, listName))
         return false
     end
 
-    if matchesAny(Config.AdminIdentifiers)     then return true end
-    if matchesAny(Config.DashboardAccessIDs)   then return true end
-    -- Whitelist-Eintraege ebenfalls prüfen / Also check whitelist entries
-    -- Wer explizit whitelisted wurde darf auch das Dashboard nutzen
-    -- Anyone explicitly whitelisted may also use the dashboard
-    if matchesAny(Config.Whitelist)            then return true end
+    if matchesAny("AdminIdentifiers",   Config.AdminIdentifiers)   then return true end
+    if matchesAny("DashboardAccessIDs", Config.DashboardAccessIDs) then return true end
+    if matchesAny("Whitelist",          Config.Whitelist)          then return true end
 
-    -- ── Debug-Ausgabe (einmalig pro Spieler) / Debug output (once per player) ─
-    if Config.Debug then
-        Logger.warn(string.format(
-            "[ADMIN-CHECK FAIL] src=%s name=%s – kein Admin-ACE/Identifier passt. " ..
-            "Tipp: kw_whitelist check %s in txAdmin-Konsole / " ..
-            "Tip: run kw_whitelist check %s in txAdmin console",
-            src, tostring(GetPlayerName(source)), src, src
-        ))
-    end
+    -- ── Immer anzeigen wenn Debug aktiv / Always show when debug enabled ───────
+    dbg(string.format(
+        "ERGEBNIS: KEIN ZUGRIFF / RESULT: NO ACCESS -- " ..
+        "Lösung: txAdmin-Konsole -> kw_whitelist check %s -- " ..
+        "oder Config.DashboardAccessIDs eintragen / or add to Config.DashboardAccessIDs",
+        src
+    ))
 
     return false
 end
