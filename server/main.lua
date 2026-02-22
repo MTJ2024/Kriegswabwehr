@@ -780,27 +780,57 @@ end)
 
 RegisterNetEvent("kriegswabwehr:requestStats", function()
     local src = source
-    if not AntiTheft.isAdmin(src) then return end
-    TriggerClientEvent("kriegswabwehr:statsResponse", src, {
-        totalConnAttempts = stats.totalConnAttempts,
-        blockedLastMinute = stats.blockedLastMinute,
-        legitimateConns   = stats.legitimateConns,
-        blockedTotal      = stats.blockedTotal,
-        attackIntensity   = stats.attackIntensity,
-        connsPerSecond    = stats.connsPerSecond,
-        attackLog         = stats.attackLog,
-        banStats          = IPBlocker.getStats(),
-        rateLimitStats    = RateLimiter.getStats(),
-        tarpitStats       = Tarpit.getStats(),
-        players           = #GetPlayers(),
-        maxPlayers        = GetConvarInt("sv_maxclients", 32),
-        pendingQueue      = WhitelistQueue.getAll(),
-        whitelistCount    = (function()
-            local n = 0
-            for _ in pairs(Whitelist.list()) do n = n + 1 end
-            return n
-        end)(),
-    })
+    if not AntiTheft.isAdmin(src) then
+        -- Gib Fehlerstatus zurück damit NUI "Kein Zugriff" anzeigen kann
+        -- Send error status so NUI can display "No access"
+        TriggerClientEvent("kriegswabwehr:statsResponse", src, { _notAdmin = true })
+        return
+    end
+
+    local ok, result = pcall(function()
+        return {
+            totalConnAttempts = stats.totalConnAttempts,
+            blockedLastMinute = stats.blockedLastMinute,
+            legitimateConns   = stats.legitimateConns,
+            blockedTotal      = stats.blockedTotal,
+            attackIntensity   = stats.attackIntensity,
+            connsPerSecond    = stats.connsPerSecond,
+            attackLog         = stats.attackLog,
+            banStats          = IPBlocker.getStats(),
+            rateLimitStats    = RateLimiter.getStats(),
+            tarpitStats       = Tarpit.getStats(),
+            players           = #GetPlayers(),
+            maxPlayers        = GetConvarInt("sv_maxclients", 32),
+            pendingQueue      = WhitelistQueue.getAll(),
+            whitelistCount    = (function()
+                local n = 0
+                for _ in pairs(Whitelist.list()) do n = n + 1 end
+                return n
+            end)(),
+        }
+    end)
+
+    if ok then
+        TriggerClientEvent("kriegswabwehr:statsResponse", src, result)
+    else
+        Logger.warn("[STATS ERROR] " .. tostring(result))
+        TriggerClientEvent("kriegswabwehr:statsResponse", src, {
+            _error            = tostring(result),
+            totalConnAttempts = stats.totalConnAttempts,
+            blockedLastMinute = stats.blockedLastMinute,
+            legitimateConns   = stats.legitimateConns,
+            blockedTotal      = stats.blockedTotal,
+            attackIntensity   = stats.attackIntensity,
+            players           = #GetPlayers(),
+            maxPlayers        = GetConvarInt("sv_maxclients", 32),
+            attackLog         = stats.attackLog or {},
+            pendingQueue      = {},
+            banStats          = { permBans = 0, tempBans = 0, blockedSubnets = 0, blockedCountries = 0 },
+            tarpitStats       = { active = 0, total = 0 },
+            rateLimitStats    = {},
+            whitelistCount    = 0,
+        })
+    end
 end)
 
 RegisterNetEvent("kriegswabwehr:getBanList", function()
@@ -904,6 +934,42 @@ RegisterCommand("kwdashboard", function(src, args, raw)
     end
     TriggerClientEvent("kriegswabwehr:openDashboard", src)
 end, false)
+
+-- Diagnose-Befehl (Serverkonsole) / Diagnostic command (server console only)
+-- Verwendung / Usage: kw_diagadmin [Spieler-ID]
+RegisterCommand("kw_diagadmin", function(src, args, raw)
+    if src ~= 0 then return end  -- nur Serverkonsole / server console only
+    local targetSrc = tonumber(args[1])
+    if not targetSrc then
+        print("[KW DIAG] Verwendung / Usage: kw_diagadmin [Spieler-ID]")
+        print("[KW DIAG] Verbundene Spieler / Connected players:")
+        for _, pidStr in ipairs(GetPlayers()) do
+            local pid = tonumber(pidStr)
+            print(string.format("  ID=%s  Name=%s", pidStr, GetPlayerName(pid) or "?"))
+        end
+        return
+    end
+    local ids = GetPlayerIdentifiers(targetSrc) or {}
+    local ep  = GetPlayerEndpoint(tostring(targetSrc)) or "?"
+    print(string.format("[KW DIAG] Spieler %d (%s) IP=%s", targetSrc, GetPlayerName(targetSrc) or "?", ep))
+    print("[KW DIAG] Identifiers:")
+    for _, id in ipairs(ids) do print("  " .. id) end
+    print("[KW DIAG] Admin-Check:")
+    print("  group.admin      = " .. tostring(IsPlayerAceAllowed(tostring(targetSrc), "group.admin")))
+    print("  group.superadmin = " .. tostring(IsPlayerAceAllowed(tostring(targetSrc), "group.superadmin")))
+    print("  command.ban      = " .. tostring(IsPlayerAceAllowed(tostring(targetSrc), "command.ban")))
+    print("  command.kick     = " .. tostring(IsPlayerAceAllowed(tostring(targetSrc), "command.kick")))
+    print("  kw.admin         = " .. tostring(IsPlayerAceAllowed(tostring(targetSrc), "kriegswabwehr.admin")))
+    print("  isAdmin()        = " .. tostring(AntiTheft.isAdmin(targetSrc)))
+    if not AntiTheft.isAdmin(targetSrc) then
+        print("[KW DIAG] LÖSUNG / FIX: Füge eine dieser Zeilen in Config.DashboardAccessIDs ein:")
+        for _, id in ipairs(ids) do
+            if id:sub(1,8) == "license:" or id:sub(1,6) == "steam:" then
+                print('  "' .. id .. '",')
+            end
+        end
+    end
+end, true)
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Log-Persistenz-API fuer Dashboard / Log persistence API for dashboard

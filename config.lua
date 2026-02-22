@@ -109,6 +109,29 @@ Config.Whitelist = {
     -- "ip:1.2.3.4",   -- IP direkt whitelisten / whitelist IP directly
 }
 
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 🖥️  DASHBOARD-ZUGRIFF / DASHBOARD ACCESS
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Zusätzliche Identifiers die das Admin-Dashboard öffnen dürfen
+-- (Fallback falls ACE/txAdmin-Gruppen nicht greifen)
+-- Additional identifiers allowed to open the admin dashboard
+-- (fallback if ACE/txAdmin groups don't work)
+--
+-- TIPP: txAdmin -> Players -> dein Name -> "license:xxx" hier eintragen
+-- TIP:  txAdmin -> Players -> your name -> paste "license:xxx" here
+-- ─────────────────────────────────────────────────────────────────────────────
+Config.DashboardAccessIDs = {
+    -- "license:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    -- "steam:110000100000001",
+    -- "ip:1.2.3.4",
+}
+
+-- Debug-Modus: Admin-Check-Diagnose in Konsole ausgeben
+-- Debug mode: print admin check diagnostics to console
+-- Auf true setzen um Verbindungsprobleme zu diagnostizieren
+-- Set to true to diagnose access problems
+Config.Debug = false
+
 -- Admin-Dashboard-Freigabe über NUI / Admin dashboard via NUI
 Config.AdminDashboardEnabled = true
 

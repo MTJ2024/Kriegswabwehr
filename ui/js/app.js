@@ -32,6 +32,22 @@ function openDashboard() {
     nuiFetch('getBanList');
     nuiFetch('getQueue');
     nuiFetch('getWhitelist');
+
+    // Wenn nach 6s keine Stats ankommen → Admin-Hinweis anzeigen
+    // If no stats arrive within 6s → show admin hint
+    _statsReceived = false;
+    if (_statsTimeoutId) clearTimeout(_statsTimeoutId);
+    _statsTimeoutId = setTimeout(function() {
+        if (!_statsReceived) {
+            showToast(
+                '⚠️ Keine Daten empfangen',
+                'Mögliche Ursache: Kein Admin-Zugriff. ' +
+                'Lösung: Trage deine license:xxx in Config.DashboardAccessIDs ' +
+                'oder setze Config.Debug = true und prüfe die Serverkonsole.',
+                'error'
+            );
+        }
+    }, 6000);
 }
 
 function closeDashboard() {
@@ -74,8 +90,33 @@ function switchTab(name) {
 }
 
 // ── Stats update ──────────────────────────────────────────────────────────────
+let _statsReceived = false;
+let _statsTimeoutId = null;
+
 function applyStats(data) {
     if (!data) return;
+
+    // Clear pending "no data" timeout
+    if (_statsTimeoutId) { clearTimeout(_statsTimeoutId); _statsTimeoutId = null; }
+    _statsReceived = true;
+
+    // Not-admin feedback
+    if (data._notAdmin) {
+        showToast(
+            '🔒 Kein Admin-Zugriff',
+            'Dein Identifier ist nicht als Admin hinterlegt. ' +
+            'Trage deine License-ID in Config.DashboardAccessIDs ein ' +
+            'oder führe in der txAdmin-Konsole aus: kw_whitelist check 1',
+            'error'
+        );
+        return;
+    }
+
+    // Server-side error (pcall caught something)
+    if (data._error) {
+        showToast('⚠️ Server-Fehler', data._error.substring(0, 120), 'error');
+        // Still apply what partial data we have
+    }
 
     setText('tile-attempts', fmtNum(data.totalConnAttempts));
     setText('tile-blocked',  fmtNum(data.blockedLastMinute));

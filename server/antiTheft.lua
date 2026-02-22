@@ -175,25 +175,54 @@ end
 
 -- Prüft ob ein Spieler Admin-Rechte hat
 -- Checks whether a player has admin rights
--- Ebene 1: ACE (txAdmin-Standard-Gruppen + eigene) | Ebene 2: Config.AdminIdentifiers
--- Level 1: ACE (txAdmin default groups + custom) | Level 2: Config.AdminIdentifiers
+-- Ebene 1: ACE (txAdmin-Standard-Gruppen + eigene) | Ebene 2: Identifier-Listen
+-- Level 1: ACE (txAdmin default groups + custom)   | Level 2: Identifier lists
 function AntiTheft.isAdmin(source)
     if not source or source == 0 then return false end
     local src = tostring(source)
-    -- txAdmin Standard-Gruppen / txAdmin default groups (group.admin, group.superadmin)
+
+    -- ── ACE-Prüfungen / ACE checks ────────────────────────────────────────────
+    -- txAdmin setzt group.admin + group.superadmin als ACE-Gruppen
+    -- txAdmin sets group.admin + group.superadmin as ACE groups
     if IsPlayerAceAllowed(src, "group.admin")      then return true end
     if IsPlayerAceAllowed(src, "group.superadmin") then return true end
-    -- Eigenes ACE-Recht / Custom ACE permission
+    -- Eigenes ACE / Custom ACE
     if IsPlayerAceAllowed(src, "kriegswabwehr.admin") then return true end
-    -- Config-Fallback (Steam/License/Discord-IDs) / Config fallback
-    local identifiers = GetPlayerIdentifiers(source)
-    for _, adminId in ipairs(Config.AdminIdentifiers or {}) do
-        for _, playerId in ipairs(identifiers or {}) do
-            if playerId == adminId then
-                return true
+    -- txAdmin grants these to all admins via group.admin – reliable fallback
+    -- txAdmin vergibt diese an alle Admins über group.admin – zuverlässiger Fallback
+    if IsPlayerAceAllowed(src, "command.ban")  then return true end
+    if IsPlayerAceAllowed(src, "command.kick") then return true end
+
+    -- ── Identifier-Prüfungen / Identifier checks ─────────────────────────────
+    local identifiers = GetPlayerIdentifiers(source) or {}
+    local rawEP = GetPlayerEndpoint(tostring(source)) or ""
+    local ipKey = "ip:" .. (rawEP:match("^([^:]+)") or "")
+
+    local function matchesAny(list)
+        for _, adminId in ipairs(list or {}) do
+            -- Direkte IP-Prüfung / Direct IP check
+            if adminId == ipKey then return true end
+            -- Identifier-Vergleich / Identifier comparison
+            for _, playerId in ipairs(identifiers) do
+                if playerId == adminId then return true end
             end
         end
+        return false
     end
+
+    if matchesAny(Config.AdminIdentifiers)     then return true end
+    if matchesAny(Config.DashboardAccessIDs)   then return true end
+
+    -- ── Debug-Ausgabe (einmalig pro Spieler) / Debug output (once per player) ─
+    if Config.Debug then
+        Logger.warn(string.format(
+            "[ADMIN-CHECK FAIL] src=%s name=%s – kein Admin-ACE/Identifier passt. " ..
+            "Tipp: kw_whitelist check %s in txAdmin-Konsole / " ..
+            "Tip: run kw_whitelist check %s in txAdmin console",
+            src, tostring(GetPlayerName(source)), src, src
+        ))
+    end
+
     return false
 end
 

@@ -381,17 +381,19 @@ function IPBlocker.getSubnetList()
 end
 
 function IPBlocker.getStats()
-    local permCount   = 0
-    local tempCount   = 0
-    local subnetCount = 0
-    for _ in pairs(permBans)         do permCount   = permCount   + 1 end
+    local permCount     = 0
+    local tempCount     = 0
+    local subnetCount   = 0
+    local countryCount  = 0
+    for _ in pairs(permBans)         do permCount    = permCount    + 1 end
     for _, d in pairs(tempBans)      do if os.time() < d.expiry then tempCount = tempCount + 1 end end
-    for _ in pairs(blockedSubnets)   do subnetCount = subnetCount + 1 end
+    for _ in pairs(blockedSubnets)   do subnetCount  = subnetCount  + 1 end
+    for _ in pairs(blockedCountries) do countryCount = countryCount + 1 end
     return {
         permBans         = permCount,
         tempBans         = tempCount,
         blockedSubnets   = subnetCount,
-        blockedCountries = #Config.GeoBlock,
+        blockedCountries = countryCount,
     }
 end
 
