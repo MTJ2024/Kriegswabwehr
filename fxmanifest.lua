@@ -20,6 +20,10 @@ server_scripts {
     'server/ratelimiter.lua',
     'server/ipblocker.lua',
     'server/antiTheft.lua',
+    -- Abschreckungsmodule (vor main laden) / Deterrence modules (load before main)
+    'server/tarpit.lua',
+    'server/abuseReporter.lua',
+    -- Event-Schutz & Hauptmodul / Event protection & main module
     'server/events.lua',
     'server/main.lua',
 }

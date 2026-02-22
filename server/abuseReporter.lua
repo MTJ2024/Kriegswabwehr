@@ -55,8 +55,8 @@ local function buildARFReport(data)
     local ts         = os.date("!%a, %d %b %Y %H:%M:%S +0000")
 
     local report = table.concat({
-        "From: abuse-report@kriegswabwehr.local",
-        "To: abuse@" .. (data.isp or "isp.example.com"):lower():gsub("%s+", ""),
+        "From: noreply@abuse-report.example.com",
+        "To: abuse@" .. (data.isp or "isp.example.com"):lower():gsub("[^a-z0-9%-%.]+", "-"),
         "Date: " .. ts,
         "Subject: [ABUSE] DDoS / Connection Flood Attack - " .. (data.ip or "Unknown") .. " - Ref: " .. data.refID,
         "MIME-Version: 1.0",
@@ -220,7 +220,7 @@ function AbuseReporter.report(data)
             "Bitte an **abuse@" .. (data.isp or "isp.example"):lower():gsub("%s+", "") .. "** weiterleiten:\n```\n" .. arfReport:sub(1, 3500) .. "\n```",
             Config.DiscordColors.warning,
             {
-                { name = "📬 Senden an / Send to", value = "abuse@" .. (data.isp or "?"):lower():gsub("[^a-z0-9%-%.]+", ""), inline = false },
+                { name = "📬 Senden an / Send to", value = "abuse@" .. (data.isp or "?"):lower():gsub("[^a-z0-9%-%.]+", "-"), inline = false },
             }
         )
     end
@@ -229,7 +229,7 @@ function AbuseReporter.report(data)
 end
 
 -- Schnellbericht bei Stufe-3-Eskalation / Quick report on level-3 escalation
-function AbuseReporter.quickReport(ip, geoData, violations)
+function AbuseReporter.quickReport(ip, geoData, violations, firstSeen)
     local geo = geoData or {}
     AbuseReporter.report({
         ip           = ip,
@@ -243,7 +243,7 @@ function AbuseReporter.quickReport(ip, geoData, violations)
         isHosting    = geo.isHosting or false,
         attackType   = "DDoS / Connection Flood (Loading Screen Phase)",
         violations   = violations or 3,
-        firstSeen    = os.time(),
+        firstSeen    = firstSeen or os.time(),
         lastSeen     = os.time(),
         action       = "permban + subnet block",
         subnetBlocked = true,

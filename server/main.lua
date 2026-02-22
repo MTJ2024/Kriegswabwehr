@@ -1,8 +1,11 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 -- Kriegswabwehr – Hauptmodul / Main Module
 -- ═══════════════════════════════════════════════════════════════════════════
--- playerConnecting-Hook, Eskalations-Engine, Dashboard-API
--- playerConnecting hook, escalation engine, dashboard API
+-- ⚠️  PRIMÄRER ANGRIFFSPUNKT: playerConnecting / Ladebildschirm-Phase
+-- ⚠️  PRIMARY ATTACK SURFACE:  playerConnecting / loading-screen phase
+--
+-- ALLE Abwehrmechanismen greifen hier, bevor der Spieler den Server betritt.
+-- ALL defence mechanisms fire here before the player enters the server.
 -- ═══════════════════════════════════════════════════════════════════════════
 
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -14,31 +17,34 @@ local stats = {
     blockedLastMinute   = 0,
     blockedTotal        = 0,
     legitimateConns     = 0,
-    attackIntensity     = 0,    -- 0–100 %
-    blockedPerMinute    = {},   -- Zeitreihe / Time series
+    attackIntensity     = 0,
+    blockedPerMinute    = {},
     connsPerSecond      = {},
-    attackLog           = {},   -- Letzte Angriffe / Recent attacks
+    attackLog           = {},
 }
 
--- Helfer: Zeitreihe aktualisieren (gleitende 60-Sekunden-Fenster)
--- Helper: update time series (rolling 60-second windows)
+-- Erster gesehener Zeitstempel pro IP (für Dossier) / First-seen timestamp per IP
+local firstSeenAt = {}
+
+-- Zentrale Referenz-ID-Funktion / Central reference ID function
+local function makeRefID(ip, suffix)
+    local clean = ip:gsub("%.", ""):sub(1, 8)
+    return string.format("KW-%s-%s-%s-%04X",
+        os.date("%Y%m%d"), os.date("%H%M%S"), clean, math.random(0, 65535))
+        .. (suffix and ("-" .. suffix) or "")
+end
+
 local function pushTimeSeries(series, value)
     table.insert(series, { t = os.time(), v = value })
-    -- Nur letzte 60 Einträge behalten / Keep only last 60 entries
     while #series > 60 do table.remove(series, 1) end
 end
 
--- Angriffsintensität berechnen (0–100)
--- Calculate attack intensity (0–100)
 local function calcIntensity()
-    local blocked  = stats.blockedLastMinute
-    local legit    = stats.legitimateConns
-    local total    = blocked + legit
+    local total = stats.blockedLastMinute + stats.legitimateConns
     if total == 0 then return 0 end
-    return math.min(100, math.floor((blocked / total) * 100))
+    return math.min(100, math.floor((stats.blockedLastMinute / total) * 100))
 end
 
--- Angriffseintrag hinzufügen / Add attack log entry
 local function logAttack(ip, country, isp, attackType, status)
     table.insert(stats.attackLog, 1, {
         time       = os.date("%H:%M:%S"),
@@ -49,18 +55,123 @@ local function logAttack(ip, country, isp, attackType, status)
         status     = status or "BLOCKED",
         timestamp  = os.time(),
     })
-    -- Maximal 200 Einträge / Maximum 200 entries
-    if #stats.attackLog > 200 then
-        table.remove(stats.attackLog)
+    if #stats.attackLog > 200 then table.remove(stats.attackLog) end
+end
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Visuelle Abschreckungsnachricht / Visual deterrence message
+-- ─────────────────────────────────────────────────────────────────────────────
+-- LEGAL: Zeigt dem Angreifer NUR seine eigenen öffentlichen Netzwerk-Daten.
+-- LEGAL: Shows the attacker ONLY their own public network data.
+--
+-- Diese Nachricht erscheint direkt im FiveM-Ladebildschirm des Angreifers –
+-- genau dort, wo der Angriff startet.
+-- This message appears directly in the attacker's FiveM loading screen –
+-- exactly where the attack originates.
+
+local function buildDeterrenceMessage(ip, geoData, refID, banType, violations)
+    local cfg = Config.VisualDeterrence
+    if not cfg or not cfg.enabled then
+        return "🚫 Zugang verweigert / Access denied."
     end
+
+    local geo     = geoData or {}
+    local subnet  = ip:match("^(%d+%.%d+%.%d+)%.%d+$")
+    local ts      = os.date("!%Y-%m-%d %H:%M:%S UTC")
+
+    -- Abschreckungsstufe erhöht mit jeder Verletzung
+    -- Deterrence level increases with each violation
+    local lines = {}
+
+    table.insert(lines, "")
+    table.insert(lines, "╔══════════════════════════════════════════════╗")
+    table.insert(lines, "║   🛡️  KRIEGSWABWEHR – ZUGANG VERWEIGERT     ║")
+    table.insert(lines, "║      🛡️  ACCESS DENIED                       ║")
+    table.insert(lines, "╚══════════════════════════════════════════════╝")
+    table.insert(lines, "")
+
+    if cfg.showIP then
+        table.insert(lines, "🌐 IP-Adresse erkannt:  " .. ip)
+    end
+
+    if cfg.showSubnet and subnet then
+        table.insert(lines, "🔗 Subnetz / Subnet:    " .. subnet .. ".0/24")
+    end
+
+    if cfg.showLocation then
+        local loc = ""
+        if geo.city and geo.city ~= "" and geo.city ~= "Unknown" then
+            loc = geo.city .. ", "
+        end
+        loc = loc .. (geo.countryName or geo.country or "Unknown")
+        table.insert(lines, "🗺️  Standort / Location: " .. loc)
+    end
+
+    if cfg.showISP and geo.isp then
+        table.insert(lines, "🏢 Anbieter / ISP:      " .. geo.isp)
+        if geo.asn and geo.asn ~= "" then
+            table.insert(lines, "📡 ASN:                 " .. geo.asn)
+        end
+    end
+
+    if geo.isVPN then
+        table.insert(lines, "🕵️  VPN/Proxy erkannt / VPN/Proxy detected")
+    end
+
+    if geo.isHosting then
+        table.insert(lines, "🖥️  Hosting-IP erkannt / Hosting IP detected")
+    end
+
+    table.insert(lines, "")
+    table.insert(lines, "⏱️  Zeitstempel:         " .. ts)
+
+    if banType == "perm" then
+        table.insert(lines, "🚫 Status:              PERMANENTE SPERRE / PERMANENT BAN")
+    elseif banType == "temp" then
+        table.insert(lines, "⏳ Status:              TEMPORÄRE SPERRE / TEMPORARY BAN")
+    elseif banType == "subnet" then
+        table.insert(lines, "🔒 Status:              SUBNETZ GESPERRT / SUBNET BLOCKED")
+    else
+        table.insert(lines, "🔒 Status:              BLOCKIERT / BLOCKED")
+    end
+
+    if violations and violations >= 2 then
+        table.insert(lines, "🔢 Verstöße / Violations: " .. violations)
+    end
+
+    -- Eskalationswarnung / Escalation warning
+    if violations and violations >= 3 then
+        table.insert(lines, "")
+        table.insert(lines, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        table.insert(lines, "⚠️  HINWEIS / NOTICE:")
+        table.insert(lines, "Dieser Vorfall wurde vollständig protokolliert.")
+        table.insert(lines, "This incident has been fully logged.")
+    end
+
+    if cfg.showAbuseWarning and violations and violations >= 2 then
+        table.insert(lines, "")
+        table.insert(lines, "📨 Ein Missbrauchsbericht wurde an deinen ISP")
+        table.insert(lines, "   gesendet / An abuse report has been sent")
+        table.insert(lines, "   to your ISP: " .. (geo.isp or "Unknown"))
+    end
+
+    if cfg.showRefID and refID then
+        table.insert(lines, "")
+        table.insert(lines, "📋 Referenz-ID / Reference ID:")
+        table.insert(lines, "   " .. refID)
+        table.insert(lines, "   (Für Strafanzeige / For police report)")
+    end
+
+    table.insert(lines, "")
+    table.insert(lines, "╚══════════════════════════════════════════════╝")
+
+    return table.concat(lines, "\n")
 end
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Eskalations-Engine / Escalation Engine
 -- ─────────────────────────────────────────────────────────────────────────────
 
--- Bestimmt und führt die Eskalationsstufe aus
--- Determines and executes the escalation level
 local function escalate(ip, geoData)
     local violations = RateLimiter.getViolations(ip)
     local level      = math.min(violations, 3)
@@ -80,16 +191,13 @@ local function escalate(ip, geoData)
     }
 
     if cfg.action == "warn" then
-        -- Stufe 1: Nur warnen und protokollieren / Level 1: Warn and log only
         Logger.alertAttack(alertData)
 
     elseif cfg.action == "tempban" then
-        -- Stufe 2: Temporäre Sperre / Level 2: Temporary ban
         IPBlocker.tempBan(ip, cfg.message, cfg.duration or Config.TempBanDuration, "Connection Flood")
         Logger.alertAttack(alertData)
 
     elseif cfg.action == "permban" then
-        -- Stufe 3: Permanente Sperre + Subnetzblockierung + Discord
         IPBlocker.permBan(ip, cfg.message, "Connection Flood")
         if cfg.subnetBlock then
             IPBlocker.blockSubnet(ip, "Wiederholter DDoS-Angriff / Repeated DDoS attack")
@@ -97,87 +205,173 @@ local function escalate(ip, geoData)
         if cfg.discordAlert then
             Logger.alertAttack(alertData)
         end
+        -- Stufe 3: Missbrauchsbericht an ISP generieren / Level 3: generate ISP abuse report
+        if Config.AbuseReporting and Config.AbuseReporting.enabled then
+            AbuseReporter.quickReport(ip, geoInfo, violations, firstSeenAt[ip])
+        end
     end
 
-    stats.blockedTotal        = stats.blockedTotal + 1
-    stats.blockedLastMinute   = stats.blockedLastMinute + 1
-    stats.attackIntensity     = calcIntensity()
-
+    stats.blockedTotal      = stats.blockedTotal + 1
+    stats.blockedLastMinute = stats.blockedLastMinute + 1
+    stats.attackIntensity   = calcIntensity()
     logAttack(ip, geoInfo.country, geoInfo.isp, "Connection Flood", cfg.action:upper())
 end
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- playerConnecting – Erste Verteidigungslinie / First line of defense
+-- playerConnecting – LADEBILDSCHIRM-FESTUNG / LOADING SCREEN FORTRESS
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Dies ist der exakte Punkt wo ~99% aller Angriffe stattfinden.
+-- This is the exact point where ~99% of all attacks happen.
+--
+-- Ablauf / Flow:
+--   1. Sofort defer()  → wir kontrollieren den Ladebildschirm
+--   2. IP-Sperre       → Honeypot oder sofortige Ablehnung
+--   3. ID-Sperre       → Identifier-Ban
+--   4. Steam-Token     → kein Token = Bot-Merkmal
+--   5. Simultane Limit → zu viele parallele Verbindungen von dieser IP
+--   6. Rate-Limit      → zu schnelle Verbindungsversuche
+--   7. Geo-IP          → Land/VPN/Proxy prüfen
+--   ✓  Erlaubt         → Spieler darf joinen
 -- ─────────────────────────────────────────────────────────────────────────────
 
 AddEventHandler("playerConnecting", function(name, setKickReason, deferrals)
-    local source  = source
-    local rawIP   = GetPlayerEndpoint(source) or ""
-    local ip      = rawIP:match("^([^:]+)") or rawIP
+    local src    = source
+    local rawIP  = GetPlayerEndpoint(src) or ""
+    local ip     = rawIP:match("^([^:]+)") or rawIP
 
     stats.totalConnAttempts = stats.totalConnAttempts + 1
     pushTimeSeries(stats.connsPerSecond, 1)
 
-    -- Sofort deferrieren / Defer immediately
+    -- Ersten Zeitstempel merken / Record first-seen timestamp
+    if not firstSeenAt[ip] then firstSeenAt[ip] = os.time() end
+
+    -- ── Schritt 0: Sofort defer() – ab jetzt kontrollieren wir den Ladebildschirm
+    -- ── Step 0: Defer immediately – we now control the loading screen
     deferrals.defer()
     Wait(0)
 
-    deferrals.update("🛡️ Kriegswabwehr: Verbindung wird geprüft...")
-    Wait(50)
+    deferrals.update("🛡️ Kriegswabwehr: Verbindungsprüfung läuft...")
+    Wait(100)
 
-    -- ── Schritt 1: IP-Sperre prüfen / Step 1: Check IP ban ──────────────────
+    -- ────────────────────────────────────────────────────────────────────────
+    -- Schritt 1: IP-Sperrliste / Step 1: IP ban list
+    -- ────────────────────────────────────────────────────────────────────────
     local banCheck = IPBlocker.isBlocked(ip)
     if banCheck.blocked then
         stats.blockedTotal      = stats.blockedTotal + 1
         stats.blockedLastMinute = stats.blockedLastMinute + 1
         logAttack(ip, nil, nil, "Banned IP", "BLOCKED")
-        deferrals.done("🚫 Zugang verweigert: " .. banCheck.reason)
+
+        local violations = RateLimiter.getViolations(ip)
+
+        -- Honeypot: Gebannte IP in Fake-Schleife halten / Hold banned IP in fake loop
+        if Config.Honeypot and Config.Honeypot.enabled then
+            IPBlocker.checkGeoIP(ip, function(geoData)
+                local refID = makeRefID(ip, "BAN")
+                Tarpit.hold(ip, math.max(violations, 1), deferrals, function()
+                    deferrals.done(buildDeterrenceMessage(ip, geoData, refID, banCheck.type, violations))
+                end)
+            end)
+        else
+            IPBlocker.checkGeoIP(ip, function(geoData)
+                local refID = makeRefID(ip, "BAN")
+                deferrals.done(buildDeterrenceMessage(ip, geoData, refID, banCheck.type, violations))
+            end)
+        end
         return
     end
 
-    -- ── Schritt 2: Identifier-Sperre prüfen / Step 2: Check identifier ban ──
-    local identifiers = GetPlayerIdentifiers(source)
+    -- ────────────────────────────────────────────────────────────────────────
+    -- Schritt 2: Identifier-Sperre / Step 2: Identifier ban
+    -- ────────────────────────────────────────────────────────────────────────
+    local identifiers = GetPlayerIdentifiers(src)
     for _, id in ipairs(identifiers or {}) do
         local idBlocked, idReason = IPBlocker.isIdentifierBlocked(id)
         if idBlocked then
             stats.blockedTotal      = stats.blockedTotal + 1
             stats.blockedLastMinute = stats.blockedLastMinute + 1
-            deferrals.done("🚫 Zugang verweigert (ID): " .. (idReason or "Banned"))
+            deferrals.done("🚫 Zugang verweigert (ID gesperrt): " .. (idReason or "Banned"))
             return
         end
     end
 
-    -- ── Schritt 3: Steam-Token-Prüfung / Step 3: Steam token check ──────────
-    if Config.AttackSignatures.requireSteamToken and not AntiTheft.validateSteamToken(source) then
+    -- ────────────────────────────────────────────────────────────────────────
+    -- Schritt 3: Steam-Token-Prüfung (kein Token = Bot-Merkmal)
+    -- Step 3: Steam token check (no token = bot signature)
+    -- ────────────────────────────────────────────────────────────────────────
+    if Config.AttackSignatures.requireSteamToken and not AntiTheft.validateSteamToken(src) then
         stats.blockedTotal      = stats.blockedTotal + 1
         stats.blockedLastMinute = stats.blockedLastMinute + 1
-        logAttack(ip, nil, nil, "No Steam Token", "BLOCKED")
-        deferrals.done("🚫 Kein gültiges Steam-Token erkannt / No valid Steam token detected.")
+        logAttack(ip, nil, nil, "No Steam Token (Bot)", "BLOCKED")
+        Logger.warn("[BOT-DETECT] Kein Steam-Token – wahrscheinlich Bot: IP=" .. ip)
+        -- Bots kurz in Tarpit halten / Hold bots briefly in tarpit
+        if Config.Tarpit and Config.Tarpit.enabled then
+            Tarpit.hold(ip, 1, deferrals, function()
+                deferrals.done("🚫 Kein gültiges Steam-Token erkannt.\nBitte starte Steam und versuche es erneut.")
+            end)
+        else
+            deferrals.done("🚫 Kein gültiges Steam-Token erkannt.")
+        end
         return
     end
 
-    -- ── Schritt 4: Simultane Verbindungslimits / Step 4: Simultaneous limits ─
+    -- ────────────────────────────────────────────────────────────────────────
+    -- Schritt 4: Simultane Verbindungslimits / Step 4: Simultaneous limits
+    -- Zu viele parallele Verbindungen von dieser IP = DDoS-Werkzeug
+    -- Too many parallel connections from this IP = DDoS tool
+    -- ────────────────────────────────────────────────────────────────────────
     local simCheck = RateLimiter.checkSimultaneous(ip)
     if not simCheck.allowed then
-        escalate(ip, nil)
-        logAttack(ip, nil, nil, "Simultaneous Connection Limit", "BLOCKED")
-        deferrals.done("🚫 Verbindungslimit erreicht / Connection limit reached.")
-        return
-    end
-
-    -- ── Schritt 5: Rate-Limiting / Step 5: Rate limiting ────────────────────
-    local rateCheck = RateLimiter.checkConnectionRate(ip)
-    if not rateCheck.allowed then
-        -- Geo-IP im Hintergrund abrufen und eskalieren
-        -- Fetch Geo-IP in background and escalate
         IPBlocker.checkGeoIP(ip, function(geoData)
             escalate(ip, geoData)
+            local violations = RateLimiter.getViolations(ip)
+            local refID      = makeRefID(ip, "SIM")
+            logAttack(ip, geoData.country, geoData.isp, "Connection Flood", "BLOCKED")
+            if Config.Tarpit and Config.Tarpit.enabled and violations >= (Config.Tarpit.minViolations or 1) then
+                Tarpit.hold(ip, violations, deferrals, function()
+                    deferrals.done(buildDeterrenceMessage(ip, geoData, refID, "temp", violations))
+                end)
+            else
+                deferrals.done(buildDeterrenceMessage(ip, geoData, refID, "temp", violations))
+            end
         end)
-        deferrals.done("🚫 Rate-Limit überschritten / Rate limit exceeded. Bitte warte kurz.")
         return
     end
 
-    -- ── Schritt 6: Geo-IP-Prüfung / Step 6: Geo IP check ───────────────────
+    -- ────────────────────────────────────────────────────────────────────────
+    -- Schritt 5: Rate-Limiting / Step 5: Rate limiting
+    -- Zu schnelle Verbindungsfolge = Angriffstools (CMD-Skripte, Bots)
+    -- Too-fast connection sequence = attack tools (CMD scripts, bots)
+    -- ────────────────────────────────────────────────────────────────────────
+    local rateCheck = RateLimiter.checkConnectionRate(ip)
+    if not rateCheck.allowed then
+        -- Geo-IP abrufen, eskalieren, dann deterrence anzeigen
+        -- Fetch Geo-IP, escalate, then show deterrence
+        IPBlocker.checkGeoIP(ip, function(geoData)
+            escalate(ip, geoData)
+            local violations = RateLimiter.getViolations(ip)
+            local refID      = makeRefID(ip, "RL")
+            logAttack(ip, geoData.country, geoData.isp, "Connection Flood", "BLOCKED")
+
+            -- Tarpit aktivieren wenn konfiguriert / Activate tarpit if configured
+            if Config.Tarpit and Config.Tarpit.enabled and violations >= (Config.Tarpit.minViolations or 1) then
+                -- Angreifer im Ladebildschirm festhalten / Hold attacker on loading screen
+                Tarpit.hold(ip, violations, deferrals, function()
+                    -- Nach Tarpit: visuell abschrecken / After tarpit: visual deterrence
+                    deferrals.done(buildDeterrenceMessage(ip, geoData, refID, nil, violations))
+                end)
+            else
+                deferrals.done(buildDeterrenceMessage(ip, geoData, refID, nil, violations))
+            end
+        end)
+        return
+    end
+
+    -- ────────────────────────────────────────────────────────────────────────
+    -- Schritt 6: Geo-IP-Prüfung / Step 6: Geo IP check
+    -- Jede erlaubte Verbindung läuft durch Geo-Check
+    -- Every permitted connection goes through geo check
+    -- ────────────────────────────────────────────────────────────────────────
     RateLimiter.registerConnection(ip)
 
     IPBlocker.checkGeoIP(ip, function(geoData)
@@ -185,6 +379,8 @@ AddEventHandler("playerConnecting", function(name, setKickReason, deferrals)
             RateLimiter.deregisterConnection(ip)
             stats.blockedTotal      = stats.blockedTotal + 1
             stats.blockedLastMinute = stats.blockedLastMinute + 1
+
+            local refID = makeRefID(ip, "GEO")
             logAttack(ip, geoData.country, geoData.isp, geoData.reason or "Geo-Block", "BLOCKED")
             Logger.alertAttack({
                 ip              = ip,
@@ -192,18 +388,18 @@ AddEventHandler("playerConnecting", function(name, setKickReason, deferrals)
                 isp             = geoData.isp,
                 attackType      = "Geo-Block",
                 escalationLevel = 1,
-                action          = "permban",
+                action          = "block",
                 reason          = geoData.reason,
             })
-            deferrals.done("🚫 Zugang verweigert: " .. (geoData.reason or "Geo-blocked"))
+            deferrals.done(buildDeterrenceMessage(ip, geoData, refID, "perm", 1))
         else
-            -- Verbindung erlaubt / Connection allowed
+            -- ✓ Verbindung erlaubt / Connection allowed
             stats.legitimateConns = stats.legitimateConns + 1
             stats.attackIntensity = calcIntensity()
             Logger.info(string.format(
-                "[CONNECT] Erlaubt: %s (%s) IP=%s Land=%s ISP=%s",
-                name, tostring(source), ip,
-                geoData.country or "XX", geoData.isp or "?"
+                "[CONNECT ✓] %s (%s) IP=%s %s/%s ISP=%s",
+                name, tostring(src), ip,
+                geoData.country or "XX", geoData.countryName or "?", geoData.isp or "?"
             ))
             deferrals.done()
         end
@@ -211,30 +407,28 @@ AddEventHandler("playerConnecting", function(name, setKickReason, deferrals)
 end)
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- playerDropped – Verbindung abmelden / playerDropped – deregister connection
+-- playerDropped – Verbindung abmelden / Deregister connection
 -- ─────────────────────────────────────────────────────────────────────────────
 
 AddEventHandler("playerDropped", function(reason)
-    local source = source
-    local rawIP  = GetPlayerEndpoint(source) or ""
-    local ip     = rawIP:match("^([^:]+)") or rawIP
+    local src   = source
+    local rawIP = GetPlayerEndpoint(src) or ""
+    local ip    = rawIP:match("^([^:]+)") or rawIP
 
     RateLimiter.deregisterConnection(ip)
-    RateLimiter.cleanupPlayer(source)
+    RateLimiter.cleanupPlayer(src)
 
-    Logger.debug(string.format("[DISCONNECT] Spieler %s (IP=%s) getrennt: %s", tostring(source), ip, reason))
+    Logger.debug(string.format("[DISCONNECT] %s (IP=%s): %s", tostring(src), ip, reason))
 end)
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- Dashboard-API über Netz-Events / Dashboard API via net events
+-- Dashboard-API / Dashboard API
 -- ─────────────────────────────────────────────────────────────────────────────
 
--- Statistiken an Admin-Dashboard senden / Send statistics to admin dashboard
 RegisterNetEvent("kriegswabwehr:requestStats", function()
-    local source = source
-    if not AntiTheft.isAdmin(source) then return end
-
-    local payload = {
+    local src = source
+    if not AntiTheft.isAdmin(src) then return end
+    TriggerClientEvent("kriegswabwehr:statsResponse", src, {
         totalConnAttempts = stats.totalConnAttempts,
         blockedLastMinute = stats.blockedLastMinute,
         legitimateConns   = stats.legitimateConns,
@@ -244,67 +438,68 @@ RegisterNetEvent("kriegswabwehr:requestStats", function()
         attackLog         = stats.attackLog,
         banStats          = IPBlocker.getStats(),
         rateLimitStats    = RateLimiter.getStats(),
+        tarpitStats       = Tarpit.getStats(),
         players           = GetNumPlayers(),
         maxPlayers        = GetConvarInt("sv_maxclients", 32),
-    }
-
-    TriggerClientEvent("kriegswabwehr:statsResponse", source, payload)
+    })
 end)
 
--- Ban-Liste abrufen / Retrieve ban list
 RegisterNetEvent("kriegswabwehr:getBanList", function()
-    local source = source
-    if not AntiTheft.isAdmin(source) then return end
-    TriggerClientEvent("kriegswabwehr:banListResponse", source, {
+    local src = source
+    if not AntiTheft.isAdmin(src) then return end
+    TriggerClientEvent("kriegswabwehr:banListResponse", src, {
         bans    = IPBlocker.getBanList(),
         subnets = IPBlocker.getSubnetList(),
     })
 end)
 
--- IP entsperren / Unban IP
 RegisterNetEvent("kriegswabwehr:unbanIP", function(ip)
-    local source = source
-    if not AntiTheft.isAdmin(source) then return end
+    local src = source
+    if not AntiTheft.isAdmin(src) then return end
     local success = IPBlocker.unban(ip)
-    Logger.adminAction(source, "UNBAN", ip, success and "Erfolgreich" or "IP nicht gefunden")
-    TriggerClientEvent("kriegswabwehr:unbanResult", source, { success = success, ip = ip })
+    Logger.adminAction(src, "UNBAN", ip, success and "Erfolgreich" or "IP nicht gefunden")
+    TriggerClientEvent("kriegswabwehr:unbanResult", src, { success = success, ip = ip })
 end)
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- Periodisches Zurücksetzen der Minuten-Statistik
--- Periodic reset of per-minute statistics
+-- Periodisches Zurücksetzen der Minuten-Statistik / Periodic stats reset
 -- ─────────────────────────────────────────────────────────────────────────────
 
 CreateThread(function()
     while true do
-        Wait(60000)  -- Jede Minute / Every minute
+        Wait(60000)
         pushTimeSeries(stats.blockedPerMinute, stats.blockedLastMinute)
         stats.blockedLastMinute = 0
         stats.attackIntensity   = calcIntensity()
+        -- firstSeenAt bereinigen: Einträge älter als 24h entfernen / Clean entries older than 24h
+        local cutoff = os.time() - 86400
+        for ip, ts in pairs(firstSeenAt) do
+            if ts < cutoff then firstSeenAt[ip] = nil end
+        end
     end
 end)
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- Admin-Dashboard NUI öffnen / Open admin dashboard NUI
+-- Admin-Befehl / Admin command
 -- ─────────────────────────────────────────────────────────────────────────────
 
-RegisterCommand("kwdashboard", function(source, args, raw)
-    if source == 0 then
-        -- Server-Konsole / Server console
-        Logger.info("Dashboard-Befehl von Serverkonsole ausgeführt")
+RegisterCommand("kwdashboard", function(src, args, raw)
+    if src == 0 then
+        Logger.info("Dashboard-Befehl von Serverkonsole")
         return
     end
-    if not AntiTheft.isAdmin(source) then
-        TriggerClientEvent("chat:addMessage", source, {
-            color   = {255, 50, 50},
-            args    = {"[KW]", "Keine Berechtigung / No permission."},
+    if not AntiTheft.isAdmin(src) then
+        TriggerClientEvent("chat:addMessage", src, {
+            color = {255, 50, 50},
+            args  = {"[KW]", "Keine Berechtigung / No permission."},
         })
         return
     end
-    TriggerClientEvent("kriegswabwehr:openDashboard", source)
+    TriggerClientEvent("kriegswabwehr:openDashboard", src)
 end, false)
 
-Logger.info("Kriegswabwehr Hauptmodul gestartet / Kriegswabwehr main module started")
 Logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-Logger.info("  🛡️  KRIEGSWABWEHR – DDoS-Schutzschild aktiv / Active  ")
+Logger.info("  🛡️  KRIEGSWABWEHR – Ladebildschirm-Festung aktiv      ")
+Logger.info("  🕸️  Tarpit    | 👁️  Visual Deterrence | 📨 ISP Report  ")
+Logger.info("  🍯  Honeypot  | 🌍  Geo-Block         | 🔒 Rate Limit  ")
 Logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")

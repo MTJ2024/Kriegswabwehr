@@ -94,7 +94,8 @@ function Tarpit.hold(ip, violations, deferrals, onDone)
 
     -- Fake-Nachrichten alle 2 Sekunden senden / Send fake messages every 2s
     local elapsed   = 0
-    local msgIndex  = math.random(1, #FAKE_MESSAGES)
+    -- Starte immer bei Nachricht 1 für konsistente Sprache / Always start at msg 1 for consistent language
+    local msgIndex  = 1
 
     CreateThread(function()
         while elapsed < delayMs do
@@ -112,14 +113,14 @@ function Tarpit.hold(ip, violations, deferrals, onDone)
         end
 
         -- Tarpit abgeschlossen / Tarpit complete
-        local wastedMs = os.time() - startedAt
-        tarpitStats.totalMsWasted   = tarpitStats.totalMsWasted + (wastedMs * 1000)
+        local wastedSec = os.time() - startedAt
+        tarpitStats.totalMsWasted   = tarpitStats.totalMsWasted + (wastedSec * 1000)
         tarpitStats.currentActive   = math.max(0, tarpitStats.currentActive - 1)
         activeTarpits[ip]           = nil
 
         Logger.info(string.format(
             "[TARPIT] Abgeschlossen: IP=%s ~%ds Ressourcen verschwendet / Wasted ~%ds of attacker resources",
-            ip, wastedMs, wastedMs
+            ip, wastedSec, wastedSec
         ))
 
         onDone()
