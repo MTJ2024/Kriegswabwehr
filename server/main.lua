@@ -498,39 +498,15 @@ AddEventHandler("playerConnecting", function(name, setKickReason, deferrals)
 
     -- ╔══════════════════════════════════════════════════════════════════════╗
     -- ║  WHITELIST-BYPASS – LÄUFT VOR ALLEN ANDEREN PRÜFUNGEN              ║
-    -- ║  WHITELIST BYPASS  – RUNS BEFORE ALL OTHER CHECKS                  ║
-    -- ║                                                                      ║
-    -- ║  Prüft: Config.Whitelist  +  Config.AdminIdentifiers  +  IP        ║
+    -- ║  Ebene 1: ACE/txAdmin  |  Ebene 2: Datei  |  Ebene 3: Config      ║
     -- ╚══════════════════════════════════════════════════════════════════════╝
-    local playerIds = GetPlayerIdentifiers(src) or {}
+    local playerIds             = GetPlayerIdentifiers(src) or {}
+    local whitelisted, wlReason = Whitelist.check(src, ip)
 
-    -- IP direkt whitelisten ("ip:x.x.x.x" in Whitelist) / Direct IP whitelist
-    local ipEntry = "ip:" .. ip
-
-    -- Erlaubte IDs = Whitelist + AdminIdentifiers zusammengeführt
-    -- Allowed IDs = Whitelist + AdminIdentifiers merged
-    local function isWhitelisted()
-        -- IP-Direkteintrag prüfen / Check direct IP entry
-        for _, wl in ipairs(Config.Whitelist or {}) do
-            if wl == ipEntry then return true, "IP-Whitelist" end
-        end
-        -- Identifier-Einträge prüfen / Check identifier entries
-        for _, pid in ipairs(playerIds) do
-            for _, wl in ipairs(Config.Whitelist or {}) do
-                if pid == wl then return true, "Whitelist" end
-            end
-            for _, aid in ipairs(Config.AdminIdentifiers or {}) do
-                if pid == aid then return true, "Admin" end
-            end
-        end
-        return false, nil
-    end
-
-    local whitelisted, wlReason = isWhitelisted()
     if whitelisted then
         stats.legitimateConns = stats.legitimateConns + 1
         Logger.info(string.format(
-            "[%s ✓] %s (%s) IP=%s – Whitelist-Bypass aktiv / whitelist bypass active",
+            "[%s ✓] %s (%s) IP=%s – Whitelist-Bypass / whitelist bypass",
             wlReason, name, tostring(src), ip
         ))
         deferrals.done()
