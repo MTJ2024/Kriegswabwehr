@@ -60,8 +60,12 @@ function Logger.log(level, message)
         message   = message,
     }
 
-    -- Konsolenausgabe / Console output
-    print(string.format("%s %s %s", entry.timestamp, prefix(level), message))
+    -- Konsolenausgabe nur wenn explizit aktiviert / Console output only if explicitly enabled
+    -- Config.ConsoleLogs = false  -> kein einziger Log in der Serverkonsole sichtbar
+    -- Config.ConsoleLogs = false  -> not a single log visible in the server console
+    if Config.ConsoleLogs then
+        print(string.format("%s %s %s", entry.timestamp, prefix(level), message))
+    end
 
     -- Puffer speichern / Save to buffer
     table.insert(logBuffer, entry)

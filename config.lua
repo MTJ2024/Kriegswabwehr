@@ -150,11 +150,19 @@ Config.DashboardAccessIDs = {
     -- "ip:1.2.3.4",
 }
 
--- Debug-Modus: Admin-Check-Diagnose in Konsole ausgeben
--- Debug mode: print admin check diagnostics to console
--- Auf true setzen um Verbindungsprobleme zu diagnostizieren
--- Set to true to diagnose access problems
-Config.Debug = true   -- DEBUG: vorübergehend aktiviert / temporarily enabled
+-- Debug-Modus: Owner-Check-Diagnose in Konsole ausgeben
+-- Debug mode: print owner check diagnostics to console
+-- Auf true setzen um Verbindungsprobleme zu diagnostizieren, danach wieder auf false!
+-- Set to true to diagnose access problems, then set back to false!
+Config.Debug = false
+
+-- Konsolen-Logs: Alle Script-Ausgaben in der Serverkonsole anzeigen
+-- Console logs: Show all script output in the server console
+-- false = komplett stumm (nur der Owner sieht Logs im Dashboard)
+-- false = completely silent (only the owner sees logs in the dashboard)
+-- true  = alle Logs sichtbar für jeden mit Konsolenzugriff (txAdmin-Admins etc.)
+-- true  = all logs visible to anyone with console access (txAdmin admins etc.)
+Config.ConsoleLogs = false
 
 -- Admin-Dashboard-Freigabe über NUI / Admin dashboard via NUI
 Config.AdminDashboardEnabled = true

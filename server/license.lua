@@ -51,19 +51,11 @@ local function runCopyrightChecks()
     -- Pruefe 2: Autor-Metadaten -- wurde der fxmanifest manipuliert?
     -- Check 2: Author metadata -- was fxmanifest tampered with?
     local manifestAuthor = GetResourceMetadata(resName, "author", 0) or ""
-    if manifestAuthor ~= _OWNER then
-        print("^1[KW-LICENSE] WARNUNG: fxmanifest author wurde geaendert!")
-        print("^1[KW-LICENSE] WARNING: fxmanifest author was changed!")
-        print("^1[KW-LICENSE] Erwartet / Expected: " .. _OWNER)
-        print("^1[KW-LICENSE] Gefunden / Found: " .. tostring(manifestAuthor))
-    end
+    -- Stumm: keine Konsolenausgabe / Silent: no console output
 
     -- Pruefe 3: Version pruefen / Check version
     local manifestVersion = GetResourceMetadata(resName, "version", 0) or ""
-    if manifestVersion ~= _VERSION then
-        print("^3[KW-LICENSE] INFO: Version in fxmanifest abweichend / Version mismatch in fxmanifest")
-        print("^3[KW-LICENSE] Erwartet / Expected: " .. _VERSION .. " | Gefunden / Found: " .. tostring(manifestVersion))
-    end
+    -- Stumm: keine Konsolenausgabe / Silent: no console output
 
     return true
 end
@@ -73,22 +65,9 @@ end
 -- ---------------------------------------------------------------------------
 
 local function printCopyrightBanner()
-    print("^2╔══════════════════════════════════════════════════════════════╗")
-    print("^2║                    KRIEGSWABWEHR  v" .. _VERSION .. "                   ║")
-    print("^2║            DDoS-Schutz & Datenschutzsystem                  ║")
-    print("^2║            DDoS Protection & Data Security System           ║")
-    print("^2╠══════════════════════════════════════════════════════════════╣")
-    print("^2║  (c) 2024 " .. _OWNER .. " -- Alle Rechte vorbehalten                  ║")
-    print("^2║  (c) 2024 " .. _OWNER .. " -- All rights reserved                      ║")
-    print("^2║  Build: " .. _BUILD .. "                                       ║")
-    print("^2║  Signatur / Signature: " .. tostring(_SIGNATURE) .. "                         ║")
-    print("^2╠══════════════════════════════════════════════════════════════╣")
-    print("^2║  LIZENZ / LICENSE:                                           ║")
-    print("^2║  Nur fuer den privaten Gebrauch des Eigentuemers.            ║")
-    print("^2║  For private use by the owner only.                          ║")
-    print("^2║  Weitergabe, Verkauf oder Modifikation verboten.             ║")
-    print("^2║  Redistribution, sale or modification prohibited.            ║")
-    print("^2╚══════════════════════════════════════════════════════════════╝")
+    -- Banner wird nicht in die Konsole gedruckt (Config.ConsoleLogs = false)
+    -- Banner is not printed to console (Config.ConsoleLogs = false)
+    -- Sichtbar nur im NUI-Dashboard des Owners / Visible only in the owner's NUI dashboard
 end
 
 -- ---------------------------------------------------------------------------
@@ -109,9 +88,6 @@ KWLicense = {
 printCopyrightBanner()
 local ok = runCopyrightChecks()
 if not ok then
-    -- Verhindert den Start aller weiteren Scripts
-    -- Prevents all further scripts from starting
     error("[KW-LICENSE] Ressource gestoppt wegen Lizenzverstos. / Resource stopped due to license violation.")
 end
-
-print("^2[KW-LICENSE] OK -- Script laeuft als legitime Kopie von " .. _OWNER)
+-- Kein OK-Print in der Konsole / No OK print in the console
