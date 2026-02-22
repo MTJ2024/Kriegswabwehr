@@ -28,7 +28,6 @@ function openDashboard() {
     state.open = true;
     document.getElementById('dashboard').classList.remove('hidden');
     startClock();
-    dbgLog('dbg-ok', 'openDashboard() aufgerufen – NUI sichtbar / visible');
     nuiFetch('requestStats');
     nuiFetch('getBanList');
     nuiFetch('getQueue');
@@ -501,9 +500,13 @@ function showToast(title, body, level) {
     toast.className = 'toast ' + (level || 'error');
     toast.innerHTML = `<div class="toast-title">${title}</div><div class="toast-body">${body}</div>`;
     container.appendChild(toast);
+    container.style.display = 'flex';
     setTimeout(() => {
         toast.classList.add('removing');
-        setTimeout(() => toast.remove(), 300);
+        setTimeout(() => {
+            toast.remove();
+            if (container.children.length === 0) container.style.display = 'none';
+        }, 300);
     }, 5000);
 }
 

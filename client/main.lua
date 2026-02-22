@@ -235,11 +235,17 @@ end)
 -- /kwdashboard – Chat-Befehl direkt im FiveM-Chat
 -- ─────────────────────────────────────────────────────────────────────────────
 
+-- Befehl: Server prüft Owner, öffnet NUI NUR wenn bestätigt
+-- Command: server verifies owner, opens NUI ONLY if confirmed
 RegisterCommand("kwdashboard", function()
-    openDashboardLocal()
+    TriggerServerEvent("kriegswabwehr:checkOwner")
 end, false)
 
-TriggerEvent("chat:addSuggestion", "/kwdashboard", "Kriegswabwehr Admin-Dashboard öffnen (nur Admins)")
+-- Server-Bestätigung: nur Owner bekommt dieses Event / Only owner receives this event
+RegisterNetEvent("kriegswabwehr:ownerGranted")
+AddEventHandler("kriegswabwehr:ownerGranted", function()
+    openDashboardLocal()
+end)
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- ESC-Taste schließt Dashboard / ESC key closes dashboard

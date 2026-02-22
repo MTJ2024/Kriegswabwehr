@@ -619,7 +619,7 @@ canvas { display: block; padding: 12px; width: 100% !important; }
   position: fixed;
   top: 20px;
   right: 20px;
-  display: flex;
+  display: none;
   flex-direction: column;
   gap: 8px;
   z-index: 10002;

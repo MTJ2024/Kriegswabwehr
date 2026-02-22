@@ -775,6 +775,19 @@ AddEventHandler("playerDropped", function(reason)
 end)
 
 -- ─────────────────────────────────────────────────────────────────────────────
+-- Owner-Check für /kwdashboard – NUI öffnet NUR wenn Server bestätigt
+-- Owner check for /kwdashboard – NUI opens ONLY when server confirms
+-- ─────────────────────────────────────────────────────────────────────────────
+RegisterNetEvent("kriegswabwehr:checkOwner")
+AddEventHandler("kriegswabwehr:checkOwner", function()
+    local src = source
+    if AntiTheft.isOwner(src) then
+        TriggerClientEvent("kriegswabwehr:ownerGranted", src)
+    end
+    -- Kein Feedback an Nicht-Owner / no feedback to non-owners
+end)
+
+-- ─────────────────────────────────────────────────────────────────────────────
 -- Dashboard-API / Dashboard API
 -- ─────────────────────────────────────────────────────────────────────────────
 
