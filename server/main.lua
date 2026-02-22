@@ -584,14 +584,17 @@ AddEventHandler("playerConnecting", function(name, setKickReason, deferrals)
     end
 
     -- ────────────────────────────────────────────────────────────────────────
-    -- Schritt 3: Steam-Token-Prüfung (kein Token = Bot-Merkmal)
-    -- Step 3: Steam token check (no token = bot signature)
+    -- Schritt 3: FiveM-Token-Prüfung (kein Token = Bot-Merkmal)
+    -- Step 3: FiveM token check (no token = bot signature)
+    -- FiveM funktioniert ohne Steam (Epic, Social Club) – prüft license:/steam:/fivem:
+    -- FiveM works without Steam (Epic, Social Club) – checks license:/steam:/fivem:
     -- ────────────────────────────────────────────────────────────────────────
-    if Config.AttackSignatures.requireSteamToken and not AntiTheft.validateSteamToken(src) then
+    if Config.AttackSignatures.requireSteamToken and not AntiTheft.validateSteamToken(src, playerIds) then
         stats.blockedTotal      = stats.blockedTotal + 1
         stats.blockedLastMinute = stats.blockedLastMinute + 1
-        logAttack(ip, nil, nil, "No Steam Token (Bot)", "BLOCKED")
-        Logger.warn("[BOT-DETECT] Kein Steam-Token – wahrscheinlich Bot: IP=" .. ip)
+        logAttack(ip, nil, nil, "No Game Token (Bot)", "BLOCKED")
+        Logger.warn("[BOT-DETECT] Kein gueltiger Token (license:/steam:/fivem:) – Bot: IP=" .. ip
+            .. " IDs=" .. (#playerIds == 0 and "KEINE/NONE" or table.concat(playerIds, ",")))
         -- Bots kurz in Tarpit halten / Hold bots briefly in tarpit
         if Config.Tarpit and Config.Tarpit.enabled then
             Tarpit.hold(ip, 1, deferrals, function()

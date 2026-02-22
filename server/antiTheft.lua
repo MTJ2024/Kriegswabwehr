@@ -147,16 +147,29 @@ end
 -- Spieler-Validierung / Player Validation
 -- ─────────────────────────────────────────────────────────────────────────────
 
--- Prüft ob ein Spieler ein gültiges Steam-Token hat
--- Checks whether a player has a valid Steam token
-function AntiTheft.validateSteamToken(source)
+-- Prüft ob ein Spieler ein gültiges FiveM-Token hat (steam:, license:, license2:, fivem:)
+-- FiveM funktioniert OHNE Steam (Epic, Social Club, usw.) – prüft alle gültigen Token-Typen.
+-- Checks whether a player has any valid FiveM game token.
+-- FiveM works WITHOUT Steam (Epic, Social Club, etc.) – checks all valid token types.
+-- @param source      number     FiveM source ID
+-- @param preloadedIds table|nil Bereits abgerufene Identifiers (vermeidet Doppel-Abruf / avoids double-fetch)
+function AntiTheft.validateSteamToken(source, preloadedIds)
     if not Config.AttackSignatures.requireSteamToken then return true end
-    local identifiers = GetPlayerIdentifiers(source)
-    for _, id in ipairs(identifiers or {}) do
-        if id:sub(1, 6) == "steam:" then
-            return true
-        end
+    -- Vorgeladene IDs verwenden falls vorhanden, sonst nochmal abrufen
+    -- Use pre-loaded IDs if available, otherwise fetch again
+    local ids = (preloadedIds and #preloadedIds > 0) and preloadedIds
+                or GetPlayerIdentifiers(source) or {}
+    for _, id in ipairs(ids) do
+        local prefix8 = id:sub(1, 8)
+        local prefix6 = id:sub(1, 6)
+        -- Akzeptiere: steam:, license:, license2:, fivem:
+        -- Accept:     steam:, license:, license2:, fivem:
+        if prefix6 == "steam:"   then return true end
+        if prefix8 == "license:" then return true end
+        if prefix8 == "license2" then return true end  -- license2: (9 chars but sub(1,8)="license2")
+        if prefix6 == "fivem:"   then return true end
     end
+    -- Kein gültiger Token = sehr wahrscheinlich ein Bot / No valid token = very likely a bot
     return false
 end
 

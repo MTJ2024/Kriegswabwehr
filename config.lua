@@ -237,8 +237,11 @@ Config.AttackSignatures = {
     -- Minimale Verbindungszeit in ms (zu schnell = Bot)
     -- Minimum connection time in ms (too fast = bot)
     minConnectionTimeMs = 100,
-    -- Erfordert gültiges Steam-Token / Require valid Steam token
-    requireSteamToken = true,
+    -- Erfordert gültiges FiveM-Token (license: / license2: / fivem: / steam:)
+    -- FiveM works without Steam (Epic, Social Club, etc.) – false = alle legitimen Spieler erlaubt
+    -- Require valid FiveM token (any of: license:, license2:, fivem:, steam:)
+    -- false = all legitimate players allowed (Epic, Social Club, FiveM-only setups)
+    requireSteamToken = false,
     -- Maximale identische Verbindungspakete / Maximum identical connection packets
     maxIdenticalPackets = 3,
 }

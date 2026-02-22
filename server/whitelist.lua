@@ -259,8 +259,71 @@ RegisterCommand("kw_whitelist", function(src, args, raw)
         print("[KW] Config.Whitelist: " .. #(Config.Whitelist or {}) .. " Einträge")
         print("[KW] Config.AdminIdentifiers: " .. #(Config.AdminIdentifiers or {}) .. " Einträge")
 
+    -- ── kw_whitelist check [Spieler-ID] ──────────────────────────────────────
+    -- Diagnose: zeigt genau welche IDs erkannt wurden und ob sie matchen
+    -- Diagnose: shows exactly which IDs were detected and whether they match
+    elseif sub == "check" then
+        local targetNum = tonumber(args[2])
+        if not targetNum then
+            print("[KW] Verwendung / Usage: kw_whitelist check [Spieler-ID]")
+            return
+        end
+        local ids   = GetPlayerIdentifiers(targetNum) or {}
+        local rawIP = GetPlayerEndpoint(targetNum) or ""
+        local ip    = rawIP:match("^([^:]+)") or rawIP
+        local pName = GetPlayerName(targetNum) or "?"
+        local aceOk = IsPlayerAceAllowed(tostring(targetNum), "kriegswabwehr.whitelist")
+
+        print("[KW] ==== Whitelist-Diagnose fuer " .. pName .. " (ID " .. targetNum .. ") ====")
+        print("[KW] IP (GetPlayerEndpoint): " .. (ip ~= "" and ip or "LEER/EMPTY"))
+        print("[KW] ACE kriegswabwehr.whitelist: " .. (aceOk and "YES" or "NO"))
+        print("[KW] Identifier (" .. #ids .. " gefunden / found):")
+        if #ids == 0 then
+            print("[KW]   WARNUNG: KEINE Identifier! Steam offline? / WARNING: NO identifiers! Steam offline?")
+        end
+        for _, id in ipairs(ids) do
+            local inFile   = fileWhitelist[id] ~= nil
+            local inConfig = false
+            for _, wl in ipairs(Config.Whitelist or {}) do
+                if wl == id then inConfig = true; break end
+            end
+            local isAdm = false
+            for _, aid in ipairs(Config.AdminIdentifiers or {}) do
+                if aid == id then isAdm = true; break end
+            end
+            local match = inFile and "Datei-WL" or inConfig and "Config-WL" or isAdm and "Admin" or "KEIN MATCH"
+            print(string.format("[KW]   %-55s  -> %s", id, match))
+        end
+        local ipKey    = "ip:" .. ip
+        local ipFile   = fileWhitelist[ipKey] ~= nil
+        local ipConfig = false
+        for _, wl in ipairs(Config.Whitelist or {}) do
+            if wl == ipKey then ipConfig = true; break end
+        end
+        print(string.format("[KW]   %-55s  -> %s",
+            ipKey,
+            ipFile and "Datei-WL (IP)" or ipConfig and "Config-WL (IP)" or "KEIN IP-MATCH"
+        ))
+        print("[KW] -- Ergebnis / Result --")
+        local ok, reason = Whitelist.check(targetNum, ip, ids)
+        print("[KW]   " .. (ok and ("WHITELISTED via " .. reason) or "NICHT whitelisted"))
+        if not ok then
+            print("[KW] -- Wie whitelisten / How to whitelist --")
+            print("[KW]   Option A (sofort aktiv): kw_whitelist add " .. targetNum)
+            print("[KW]   Option B (in config.lua unter Config.Whitelist eintragen):")
+            if #ids > 0 then
+                local preferred = ids[1]
+                for _, id in ipairs(ids) do
+                    if id:sub(1,8) == "license:" then preferred = id; break end
+                end
+                print('[KW]     "' .. preferred .. '",')
+            else
+                print("[KW]     KEINE Identifier – Steam starten oder license: per txAdmin pruefen!")
+            end
+            print('[KW]   Option C (IP in Config.Whitelist): "' .. ipKey .. '",')
+        end
+
     -- ── kw_whitelist addid [Spieler-ID] ──────────────────────────────────────
-    -- Alias: fügt Spieler-ID hinzu und zeigt alle Identifier / Alias: add by player-ID
     elseif sub == "addid" or sub == "addplayer" then
         local targetNum = tonumber(args[2])
         if not targetNum then
@@ -269,7 +332,7 @@ RegisterCommand("kw_whitelist", function(src, args, raw)
         end
         local ids = GetPlayerIdentifiers(targetNum) or {}
         if #ids == 0 then
-            print("[KW] ❌ Spieler nicht gefunden / Player not found: " .. tostring(args[2]))
+            print("[KW] Spieler nicht gefunden / Player not found: " .. tostring(args[2]))
             return
         end
         local pName = GetPlayerName(targetNum) or "?"
@@ -282,13 +345,14 @@ RegisterCommand("kw_whitelist", function(src, args, raw)
 
     -- ── kw_whitelist help ────────────────────────────────────────────────────
     else
-        print("[KW] ════ kw_whitelist Befehle / Commands ════")
-        print("[KW]  kw_whitelist add [Spieler-ID]    – Spieler per Server-ID whitelisten (alle Identifier)")
-        print("[KW]  kw_whitelist add [Identifier]    – Einzelnen Identifier whitelisten (z.B. license:xxx)")
-        print("[KW]  kw_whitelist remove [Identifier] – Identifier entfernen")
-        print("[KW]  kw_whitelist list                – Alle Einträge anzeigen")
-        print("[KW]  kw_whitelist addid [Spieler-ID]  – Identifier eines Spielers anzeigen")
-        print("[KW] ══ txAdmin / ACE (kein Neustart nötig) ══")
+        print("[KW] ==== kw_whitelist Befehle / Commands ====")
+        print("[KW]  kw_whitelist add [Spieler-ID]    - Spieler per Server-ID whitelisten (alle Identifier)")
+        print("[KW]  kw_whitelist add [Identifier]    - Einzelnen Identifier whitelisten (z.B. license:xxx)")
+        print("[KW]  kw_whitelist remove [Identifier] - Identifier entfernen")
+        print("[KW]  kw_whitelist list                - Alle Eintraege anzeigen")
+        print("[KW]  kw_whitelist check [Spieler-ID]  - Diagnose: welche IDs erkannt, welche matchen")
+        print("[KW]  kw_whitelist addid [Spieler-ID]  - Identifier eines Spielers anzeigen")
+        print("[KW] == txAdmin / ACE (kein Neustart noetig) ==")
         print("[KW]  add_ace group.kriegswabwehr_whitelist kriegswabwehr.whitelist allow")
         print("[KW]  add_principal identifier.license:HEX group.kriegswabwehr_whitelist")
     end
