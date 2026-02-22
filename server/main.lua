@@ -654,15 +654,79 @@ AddEventHandler("playerConnecting", function(name, setKickReason, deferrals)
             })
             showVisualDeterrence(ip, geoData, refID, "perm", 1, deferrals)
         else
-            -- ✓ Verbindung erlaubt / Connection allowed
-            stats.legitimateConns = stats.legitimateConns + 1
-            stats.attackIntensity = calcIntensity()
-            Logger.info(string.format(
-                "[CONNECT ✓] %s (%s) IP=%s %s/%s ISP=%s",
-                name, tostring(src), ip,
-                geoData.country or "XX", geoData.countryName or "?", geoData.isp or "?"
-            ))
-            deferrals.done()
+            -- ─────────────────────────────────────────────────────────────────
+            -- ✓ Alle Security-Checks bestanden / All security checks passed
+            -- WhitelistQueue-Modus: Spieler in Warteschlange legen?
+            -- WhitelistQueue mode: put player in approval queue?
+            -- ─────────────────────────────────────────────────────────────────
+            if Config.WhitelistQueue and Config.WhitelistQueue.enabled then
+                -- Spieler in Queue einreihen / Add player to queue
+                local token = WhitelistQueue.add(src, name, ip, playerIds, geoData)
+
+                -- Ladebildschirm-Nachricht / Loading screen message
+                local timeout    = Config.WhitelistQueue.timeoutSeconds or 120
+                local waitMsg    = Config.WhitelistQueue.waitMessage
+                    or "Warte auf Admin-Freigabe... / Waiting for admin approval..."
+
+                deferrals.update(waitMsg)
+
+                -- ── Warte-Schleife / Wait loop ────────────────────────────────
+                -- Hält den Deferral offen solange kein Ergebnis vorliegt.
+                -- Holds the deferral open until a result is available.
+                local waited = 0
+                local step   = 3  -- Prüfintervall in Sekunden / check interval seconds
+                local resolved, allow, denyReason = false, false, ""
+
+                while waited < timeout do
+                    Wait(step * 1000)
+                    waited = waited + step
+
+                    resolved, allow, denyReason = WhitelistQueue.getResult(token)
+                    if resolved then break end
+
+                    local remaining = timeout - waited
+                    deferrals.update(string.format(
+                        "%s\n\n⏱️  %ds verbleibend / remaining",
+                        waitMsg, remaining
+                    ))
+                end
+
+                WhitelistQueue.cleanup(token)
+
+                if not resolved then
+                    -- Auto-Timeout
+                    deferrals.done(Config.WhitelistQueue.timeoutMessage
+                        or "Zeitüberschreitung / Timeout.")
+                elseif allow then
+                    -- Freigegeben / Approved
+                    stats.legitimateConns = stats.legitimateConns + 1
+                    stats.attackIntensity = calcIntensity()
+                    Logger.info(string.format(
+                        "[QUEUE ✓] %s (%s) IP=%s freigegeben / approved",
+                        name, tostring(src), ip
+                    ))
+                    deferrals.done()
+                else
+                    -- Abgelehnt / Denied
+                    stats.blockedTotal      = stats.blockedTotal + 1
+                    stats.blockedLastMinute = stats.blockedLastMinute + 1
+                    Logger.info(string.format(
+                        "[QUEUE ✗] %s (%s) IP=%s abgelehnt / denied: %s",
+                        name, tostring(src), ip, denyReason
+                    ))
+                    deferrals.done(denyReason)
+                end
+            else
+                -- ✓ Verbindung direkt erlaubt / Connection allowed directly
+                stats.legitimateConns = stats.legitimateConns + 1
+                stats.attackIntensity = calcIntensity()
+                Logger.info(string.format(
+                    "[CONNECT ✓] %s (%s) IP=%s %s/%s ISP=%s",
+                    name, tostring(src), ip,
+                    geoData.country or "XX", geoData.countryName or "?", geoData.isp or "?"
+                ))
+                deferrals.done()
+            end
         end
     end)
 end)
@@ -702,6 +766,12 @@ RegisterNetEvent("kriegswabwehr:requestStats", function()
         tarpitStats       = Tarpit.getStats(),
         players           = GetNumPlayers(),
         maxPlayers        = GetConvarInt("sv_maxclients", 32),
+        pendingQueue      = WhitelistQueue.getAll(),
+        whitelistCount    = (function()
+            local n = 0
+            for _ in pairs(Whitelist.list()) do n = n + 1 end
+            return n
+        end)(),
     })
 end)
 
@@ -720,6 +790,54 @@ RegisterNetEvent("kriegswabwehr:unbanIP", function(ip)
     local success = IPBlocker.unban(ip)
     Logger.adminAction(src, "UNBAN", ip, success and "Erfolgreich" or "IP nicht gefunden")
     TriggerClientEvent("kriegswabwehr:unbanResult", src, { success = success, ip = ip })
+end)
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Whitelist-API fuer Dashboard / Whitelist API for dashboard
+-- ─────────────────────────────────────────────────────────────────────────────
+
+RegisterNetEvent("kriegswabwehr:getWhitelist", function()
+    local src = source
+    if not AntiTheft.isAdmin(src) then return end
+    local entries = {}
+    for id, data in pairs(Whitelist.list()) do
+        table.insert(entries, {
+            identifier = id,
+            addedBy    = data.addedBy,
+            addedAt    = data.addedAt,
+            note       = data.note or "",
+        })
+    end
+    table.sort(entries, function(a, b) return (a.addedAt or 0) > (b.addedAt or 0) end)
+    TriggerClientEvent("kriegswabwehr:whitelistResponse", src, { entries = entries })
+end)
+
+RegisterNetEvent("kriegswabwehr:addWhitelist", function(data)
+    local src = source
+    if not AntiTheft.isAdmin(src) then return end
+    if not data or not data.identifier then return end
+    local ok, msg = Whitelist.add(data.identifier, "admin:" .. tostring(src), data.note or "")
+    Logger.adminAction(src, "WHITELIST_ADD", data.identifier, ok and "OK" or msg)
+    TriggerClientEvent("kriegswabwehr:whitelistActionResult", src, {
+        success    = ok,
+        action     = "add",
+        identifier = data.identifier,
+        msg        = msg,
+    })
+end)
+
+RegisterNetEvent("kriegswabwehr:removeWhitelist", function(data)
+    local src = source
+    if not AntiTheft.isAdmin(src) then return end
+    if not data or not data.identifier then return end
+    local ok, msg = Whitelist.remove(data.identifier)
+    Logger.adminAction(src, "WHITELIST_REMOVE", data.identifier, ok and "OK" or msg)
+    TriggerClientEvent("kriegswabwehr:whitelistActionResult", src, {
+        success    = ok,
+        action     = "remove",
+        identifier = data.identifier,
+        msg        = msg,
+    })
 end)
 
 -- ─────────────────────────────────────────────────────────────────────────────

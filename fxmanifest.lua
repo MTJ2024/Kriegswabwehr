@@ -20,6 +20,7 @@ server_scripts {
     'server/ipblocker.lua',
     'server/antiTheft.lua',
     'server/whitelist.lua',
+    'server/whitelistQueue.lua',   -- Live-Queue muss nach Whitelist geladen werden / Queue must load after whitelist
     'server/tarpit.lua',
     'server/abuseReporter.lua',
     'server/events.lua',

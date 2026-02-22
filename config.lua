@@ -315,3 +315,43 @@ Config.AbuseReporting = {
     -- Ab welcher Eskalationsstufe melden / From which escalation level to report
     minLevel = 3,
 }
+
+-- =============================================================================
+-- 🔑 WHITELIST-ANFRAGEN-QUEUE / WHITELIST APPROVAL QUEUE
+-- =============================================================================
+-- Wenn aktiviert: Spieler die ALLE Sicherheitschecks bestehen aber NICHT
+-- whitelisted sind, kommen in eine Live-Warteschlange. Der Admin sieht sie
+-- im Dashboard und kann per Klick freigeben oder ablehnen.
+--
+-- If enabled: players who pass ALL security checks but are NOT whitelisted
+-- are placed in a live queue. The admin sees them in the dashboard and can
+-- approve or deny with a single click.
+-- =============================================================================
+Config.WhitelistQueue = {
+    -- Queue-System aktivieren / Enable queue system
+    -- false = alte Verhaltensweise (direkt durchlassen oder blocken)
+    -- false = old behaviour (let through or block immediately)
+    enabled = false,
+
+    -- Maximale Wartezeit in Sekunden bevor Auto-Ablehnung
+    -- Maximum wait time in seconds before auto-deny
+    timeoutSeconds = 120,
+
+    -- Nachricht die der wartende Spieler im Ladebildschirm sieht
+    -- Message the waiting player sees on the loading screen
+    waitMessage = "⏳ Deine Verbindung wird von einem Admin geprüft.\n⏳ Your connection is being reviewed by an admin.",
+
+    -- Nachricht bei Timeout (kein Admin online)
+    -- Message on timeout (no admin online)
+    timeoutMessage = "⌛ Keine Admins online. Bitte versuche es später erneut.\n⌛ No admins online. Please try again later.",
+
+    -- Nachricht bei Ablehnung durch Admin
+    -- Message when denied by admin
+    denyMessage = "🚫 Verbindung vom Admin abgelehnt.\n🚫 Connection denied by admin.",
+
+    -- Spieler nach Freigabe permanent zur Whitelist hinzufügen (Standard: false)
+    -- Add player permanently to whitelist after approval (default: false)
+    -- Der Admin kann dies im Dashboard pro Anfrage überschreiben.
+    -- Admin can override this per request in the dashboard.
+    permanentByDefault = false,
+}

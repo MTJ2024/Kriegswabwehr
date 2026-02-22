@@ -5,144 +5,250 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Kriegswabwehr – Admin Dashboard</title>
   <link rel="stylesheet" href="css/style.css"/>
-  <!-- Chart.js via CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<!-- HEADER                                                          -->
-<!-- ═══════════════════════════════════════════════════════════════ -->
 <div id="dashboard" class="hidden">
 
-  <div class="header">
-    <div class="header-left">
-      <span class="logo">🛡️ KRIEGSWABWEHR</span>
-      <span class="version">v1.0.0</span>
+  <!-- ═══════════════════════════════════════════ SIDEBAR ═══ -->
+  <nav class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">🛡️</div>
+      <div class="brand-text">
+        <div class="brand-name">KRIEGSWABWEHR</div>
+        <div class="brand-ver">v1.0.0</div>
+      </div>
     </div>
-    <div class="header-center">
-      <span id="server-name">FiveM Server</span>
+
+    <div class="sidebar-status">
       <span class="dot" id="status-dot"></span>
       <span id="status-text">AKTIV</span>
     </div>
-    <div class="header-right">
-      <span id="clock"></span>
-      <button class="btn-close" onclick="closeDashboard()">✕</button>
-    </div>
-  </div>
 
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <!-- TOP-ROW: Live-Monitor-Kacheln / Live monitor tiles             -->
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <div class="tiles">
-    <div class="tile tile-red">
-      <div class="tile-icon">🔴</div>
-      <div class="tile-value" id="tile-attempts">0</div>
-      <div class="tile-label">Verbindungsversuche<br>Connection Attempts</div>
-    </div>
-    <div class="tile tile-orange">
-      <div class="tile-icon">🚫</div>
-      <div class="tile-value" id="tile-blocked">0</div>
-      <div class="tile-label">Geblockt/Minute<br>Blocked/Minute</div>
-    </div>
-    <div class="tile tile-green">
-      <div class="tile-icon">✅</div>
-      <div class="tile-value" id="tile-legit">0</div>
-      <div class="tile-label">Legitime Verbindungen<br>Legitimate Connections</div>
-    </div>
-    <div class="tile tile-blue">
-      <div class="tile-icon">👥</div>
-      <div class="tile-value" id="tile-players">0</div>
-      <div class="tile-label">Online Spieler<br>Online Players</div>
-    </div>
-    <div class="tile tile-purple">
-      <div class="tile-icon">🕸️</div>
-      <div class="tile-value" id="tile-tarpit">0</div>
-      <div class="tile-label">Aktive Tarpits<br>Active Tarpits</div>
-    </div>
-    <div class="tile tile-red">
-      <div class="tile-icon">☠️</div>
-      <div class="tile-value" id="tile-permbans">0</div>
-      <div class="tile-label">Permanente Sperren<br>Permanent Bans</div>
-    </div>
-  </div>
+    <ul class="nav-list">
+      <li class="nav-item active" data-tab="overview"   onclick="switchTab('overview')">
+        <span class="nav-icon">📊</span><span class="nav-label">Übersicht</span>
+      </li>
+      <li class="nav-item" data-tab="queue" onclick="switchTab('queue')">
+        <span class="nav-icon">⏳</span><span class="nav-label">Anfragen</span>
+        <span class="nav-badge hidden" id="queue-badge">0</span>
+      </li>
+      <li class="nav-item" data-tab="bans" onclick="switchTab('bans')">
+        <span class="nav-icon">🔒</span><span class="nav-label">Sperren</span>
+      </li>
+      <li class="nav-item" data-tab="whitelist" onclick="switchTab('whitelist')">
+        <span class="nav-icon">✅</span><span class="nav-label">Whitelist</span>
+      </li>
+      <li class="nav-item" data-tab="log" onclick="switchTab('log')">
+        <span class="nav-icon">📋</span><span class="nav-label">Live-Log</span>
+        <span class="nav-badge badge-red hidden" id="log-badge">0</span>
+      </li>
+    </ul>
 
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <!-- ANGRIFFSINTENSITÄT / Attack intensity bar                      -->
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <div class="section">
-    <div class="section-title">⚔️ Angriffsintensität / Attack Intensity</div>
-    <div class="intensity-bar-wrap">
-      <div class="intensity-bar" id="intensity-bar"></div>
-      <span class="intensity-pct" id="intensity-pct">0%</span>
+    <div class="sidebar-footer">
+      <div id="clock" class="clock"></div>
+      <button class="btn-close-side" onclick="closeDashboard()">✕ Schließen</button>
     </div>
-  </div>
+  </nav>
 
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <!-- MAIN GRID                                                      -->
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <div class="main-grid">
+  <!-- ═══════════════════════════════════════════ CONTENT ═══ -->
+  <main class="content">
 
-    <!-- ── Linke Spalte / Left column ─────────────────────────── -->
-    <div class="col-left">
+    <!-- ─────────────────────── TAB: ÜBERSICHT ──────────────── -->
+    <div id="tab-overview" class="tab-pane active">
 
-      <!-- Live-Graphen / Live graphs -->
-      <div class="card">
-        <div class="card-title">📊 Verbindungen / Connections (live)</div>
-        <canvas id="chart-conns" height="120"></canvas>
+      <!-- Stat-Kacheln -->
+      <div class="stat-grid">
+        <div class="stat-card accent-red">
+          <div class="stat-icon">🔴</div>
+          <div class="stat-value" id="tile-attempts">0</div>
+          <div class="stat-label">Verbindungsversuche</div>
+        </div>
+        <div class="stat-card accent-orange">
+          <div class="stat-icon">🚫</div>
+          <div class="stat-value" id="tile-blocked">0</div>
+          <div class="stat-label">Geblockt / Min.</div>
+        </div>
+        <div class="stat-card accent-green">
+          <div class="stat-icon">✅</div>
+          <div class="stat-value" id="tile-legit">0</div>
+          <div class="stat-label">Legitime Conns.</div>
+        </div>
+        <div class="stat-card accent-blue">
+          <div class="stat-icon">👥</div>
+          <div class="stat-value" id="tile-players">0</div>
+          <div class="stat-label">Online Spieler</div>
+        </div>
+        <div class="stat-card accent-purple">
+          <div class="stat-icon">🕸️</div>
+          <div class="stat-value" id="tile-tarpit">0</div>
+          <div class="stat-label">Aktive Tarpits</div>
+        </div>
+        <div class="stat-card accent-red">
+          <div class="stat-icon">☠️</div>
+          <div class="stat-value" id="tile-permbans">0</div>
+          <div class="stat-label">Perm. Sperren</div>
+        </div>
       </div>
 
-      <div class="card">
-        <div class="card-title">🌍 Angriffskarte / Attack Map</div>
-        <canvas id="map-canvas" width="560" height="280"></canvas>
+      <!-- Intensitätsbalken -->
+      <div class="panel mt-16">
+        <div class="panel-header">
+          <span>⚔️ Angriffsintensität</span>
+          <span id="intensity-pct" class="pct-label">0%</span>
+        </div>
+        <div class="intensity-wrap">
+          <div class="intensity-fill" id="intensity-bar"></div>
+        </div>
       </div>
 
+      <!-- Charts + Karte -->
+      <div class="two-col mt-16">
+        <div class="panel">
+          <div class="panel-header">📈 Live-Verbindungen</div>
+          <canvas id="chart-conns" height="140"></canvas>
+        </div>
+        <div class="panel">
+          <div class="panel-header">🌍 Angriffskarte</div>
+          <canvas id="map-canvas" width="560" height="240"></canvas>
+        </div>
+      </div>
     </div>
 
-    <!-- ── Rechte Spalte / Right column ───────────────────────── -->
-    <div class="col-right">
+    <!-- ─────────────────────── TAB: ANFRAGEN-QUEUE ──────────── -->
+    <div id="tab-queue" class="tab-pane hidden">
+      <div class="tab-header">
+        <div>
+          <h2 class="tab-title">⏳ Ausstehende Verbindungsanfragen</h2>
+          <p class="tab-sub">Spieler warten auf deine Freigabe im Ladebildschirm.</p>
+        </div>
+        <div class="tab-actions">
+          <label class="toggle-label">
+            <input type="checkbox" id="queue-mode-toggle" onchange="toggleQueueMode(this.checked)"/>
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            Queue-Modus aktiv
+          </label>
+          <button class="btn btn-secondary" onclick="nuiFetch('getQueue')">🔄 Aktualisieren</button>
+        </div>
+      </div>
 
-      <!-- Angriffslog / Attack log -->
-      <div class="card card-tall">
-        <div class="card-title">🔴 Ladebildschirm-Monitor / Loading Screen Monitor</div>
-        <table class="log-table">
+      <div id="queue-empty" class="empty-state">
+        <div class="empty-icon">✅</div>
+        <div class="empty-title">Keine ausstehenden Anfragen</div>
+        <div class="empty-sub">Wenn Queue-Modus aktiv ist, erscheinen neue Verbindungsanfragen hier.</div>
+      </div>
+
+      <div id="queue-list" class="queue-list"></div>
+    </div>
+
+    <!-- ─────────────────────── TAB: SPERREN ────────────────── -->
+    <div id="tab-bans" class="tab-pane hidden">
+      <div class="tab-header">
+        <div>
+          <h2 class="tab-title">🔒 Gesperrte IPs</h2>
+          <p class="tab-sub">Permanente und temporäre Sperren verwalten.</p>
+        </div>
+        <div class="tab-actions">
+          <button class="btn btn-secondary" onclick="nuiFetch('getBanList')">🔄 Aktualisieren</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <table class="data-table">
           <thead>
             <tr>
-              <th>Zeit</th><th>IP</th><th>Land</th><th>ISP</th><th>Typ</th><th>Status</th>
+              <th>IP-Adresse</th><th>Typ</th><th>Grund</th>
+              <th>Angriffstyp</th><th>Verbleibend</th><th>Aktion</th>
             </tr>
           </thead>
-          <tbody id="attack-log-body">
-            <tr><td colspan="6" class="empty">Keine Angriffe erkannt / No attacks detected</td></tr>
+          <tbody id="ban-list-body">
+            <tr><td colspan="6" class="td-empty">Keine Sperren aktiv</td></tr>
           </tbody>
         </table>
       </div>
-
     </div>
-  </div>
 
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <!-- BANN-LISTE / Ban list                                          -->
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <div class="section">
-    <div class="section-title">🔒 Gesperrte IPs / Banned IPs
-      <button class="btn-small" onclick="fetchBanList()">🔄 Aktualisieren</button>
+    <!-- ─────────────────────── TAB: WHITELIST ──────────────── -->
+    <div id="tab-whitelist" class="tab-pane hidden">
+      <div class="tab-header">
+        <div>
+          <h2 class="tab-title">✅ Whitelist-Verwaltung</h2>
+          <p class="tab-sub">Spieler permanent freischalten.</p>
+        </div>
+        <div class="tab-actions">
+          <button class="btn btn-primary" onclick="openAddWhitelistModal()">➕ Eintrag hinzufügen</button>
+          <button class="btn btn-secondary" onclick="nuiFetch('getWhitelist')">🔄 Aktualisieren</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <table class="data-table">
+          <thead>
+            <tr><th>Identifier</th><th>Hinzugefügt von</th><th>Datum</th><th>Notiz</th><th>Aktion</th></tr>
+          </thead>
+          <tbody id="whitelist-body">
+            <tr><td colspan="5" class="td-empty">Keine Einträge</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
-    <table class="ban-table">
-      <thead>
-        <tr><th>IP</th><th>Typ</th><th>Grund</th><th>Angriffstyp</th><th>Verbleibend</th><th>Aktion</th></tr>
-      </thead>
-      <tbody id="ban-list-body">
-        <tr><td colspan="6" class="empty">Keine gesperrten IPs / No banned IPs</td></tr>
-      </tbody>
-    </table>
-  </div>
 
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <!-- ALERT-TOAST (oben rechts) / Alert toast (top right)           -->
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <div id="toast-container"></div>
+    <!-- ─────────────────────── TAB: LIVE-LOG ───────────────── -->
+    <div id="tab-log" class="tab-pane hidden">
+      <div class="tab-header">
+        <div>
+          <h2 class="tab-title">📋 Ladebildschirm-Monitor</h2>
+          <p class="tab-sub">Alle Verbindungsversuche in Echtzeit.</p>
+        </div>
+        <div class="tab-actions">
+          <button class="btn btn-danger" onclick="clearLogTable()">🗑️ Leeren</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <table class="data-table">
+          <thead>
+            <tr><th>Zeit</th><th>IP</th><th>Land</th><th>ISP</th><th>Typ</th><th>Status</th></tr>
+          </thead>
+          <tbody id="attack-log-body">
+            <tr><td colspan="6" class="td-empty">Warte auf Ereignisse…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main><!-- /.content -->
 
 </div><!-- /#dashboard -->
+
+<!-- ═══════════════════════════ MODAL: WHITELIST HINZUFÜGEN ═══ -->
+<div id="modal-overlay" class="modal-overlay hidden" onclick="closeModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <span>➕ Whitelist-Eintrag hinzufügen</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Identifier</label>
+        <input id="wl-identifier" class="form-input" type="text"
+               placeholder="license:xxx  /  steam:xxx  /  ip:1.2.3.4"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notiz (optional)</label>
+        <input id="wl-note" class="form-input" type="text" placeholder="z.B. VIP-Spieler"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-primary"   onclick="submitAddWhitelist()">✅ Hinzufügen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ TOAST CONTAINER ═══════════════ -->
+<div id="toast-container"></div>
 
 <script src="js/charts.js"></script>
 <script src="js/map.js"></script>

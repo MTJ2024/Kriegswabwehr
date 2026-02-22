@@ -69,6 +69,70 @@ RegisterNUICallback("unbanIP", function(data, cb)
 end)
 
 -- ─────────────────────────────────────────────────────────────────────────────
+-- Queue-Verwaltung / Queue management
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Live-Queue-Update vom Server / Live queue update from server
+RegisterNetEvent("kriegswabwehr:queueUpdate", function(data)
+    SendNUIMessage({ type = "queueUpdate", data = data })
+end)
+
+-- Ergebnis einer Queue-Aktion / Result of a queue action
+RegisterNetEvent("kriegswabwehr:queueActionResult", function(data)
+    SendNUIMessage({ type = "queueActionResult", data = data })
+end)
+
+-- NUI: Admin genehmigt Anfrage / Admin approves request
+RegisterNUICallback("approveQueue", function(data, cb)
+    TriggerServerEvent("kriegswabwehr:approveQueue", data)
+    cb({})
+end)
+
+-- NUI: Admin lehnt Anfrage ab / Admin denies request
+RegisterNUICallback("denyQueue", function(data, cb)
+    TriggerServerEvent("kriegswabwehr:denyQueue", data)
+    cb({})
+end)
+
+-- NUI: Admin fordert Queue-Zustand an / Admin requests queue state
+RegisterNUICallback("getQueue", function(data, cb)
+    TriggerServerEvent("kriegswabwehr:getQueue")
+    cb({})
+end)
+
+-- NUI: Whitelist-Eintraege abrufen / Get whitelist entries
+RegisterNUICallback("getWhitelist", function(data, cb)
+    TriggerServerEvent("kriegswabwehr:getWhitelist")
+    cb({})
+end)
+
+-- Whitelist-Antwort vom Server / Whitelist response from server
+RegisterNetEvent("kriegswabwehr:whitelistResponse", function(data)
+    SendNUIMessage({ type = "whitelistResponse", data = data })
+end)
+
+-- NUI: Whitelist-Eintrag hinzufuegen / Add whitelist entry
+RegisterNUICallback("addWhitelist", function(data, cb)
+    if data and data.identifier then
+        TriggerServerEvent("kriegswabwehr:addWhitelist", data)
+    end
+    cb({})
+end)
+
+-- NUI: Whitelist-Eintrag entfernen / Remove whitelist entry
+RegisterNUICallback("removeWhitelist", function(data, cb)
+    if data and data.identifier then
+        TriggerServerEvent("kriegswabwehr:removeWhitelist", data)
+    end
+    cb({})
+end)
+
+-- Whitelist-Aktion-Ergebnis / Whitelist action result
+RegisterNetEvent("kriegswabwehr:whitelistActionResult", function(data)
+    SendNUIMessage({ type = "whitelistActionResult", data = data })
+end)
+
+-- ─────────────────────────────────────────────────────────────────────────────
 -- Periodische Aktualisierung alle 3 Sekunden wenn Dashboard offen
 -- Periodic update every 3 seconds while dashboard is open
 -- ─────────────────────────────────────────────────────────────────────────────
