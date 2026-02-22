@@ -500,17 +500,42 @@ AddEventHandler("playerConnecting", function(name, setKickReason, deferrals)
     -- ║  WHITELIST-BYPASS – LÄUFT VOR ALLEN ANDEREN PRÜFUNGEN              ║
     -- ║  Ebene 1: ACE/txAdmin  |  Ebene 2: Datei  |  Ebene 3: Config      ║
     -- ╚══════════════════════════════════════════════════════════════════════╝
-    local playerIds             = GetPlayerIdentifiers(src) or {}
-    local whitelisted, wlReason = Whitelist.check(src, ip)
+    -- WICHTIG: Kurze Wartezeit damit FiveM alle Identifier (steam:, license:,
+    -- discord:, xbl:) vollständig vom Client empfangen hat.
+    -- IMPORTANT: Brief wait so FiveM fully receives all identifiers (steam:,
+    -- license:, discord:, xbl:) from the client before we read them.
+    Wait(500)
+    local playerIds = GetPlayerIdentifiers(src) or {}
+
+    -- playerIds an Whitelist.check übergeben – vermeidet Doppel-Abruf und
+    -- stellt sicher dass beide denselben snapshot nutzen.
+    -- Pass playerIds to Whitelist.check – avoids double-fetch and ensures
+    -- both use the exact same snapshot.
+    local whitelisted, wlReason = Whitelist.check(src, ip, playerIds)
 
     if whitelisted then
         stats.legitimateConns = stats.legitimateConns + 1
         Logger.info(string.format(
-            "[%s ✓] %s (%s) IP=%s – Whitelist-Bypass / whitelist bypass",
-            wlReason, name, tostring(src), ip
+            "[%s ✓] %s (%s) IP=%s – Whitelist-Bypass / whitelist bypass (IDs: %s)",
+            wlReason, name, tostring(src), ip, table.concat(playerIds, ", ")
         ))
         deferrals.done()
         return
+    end
+
+    -- Debug-Log: welche Identifiers wurden geprüft? (nur INFO-Level)
+    -- Debug log: which identifiers were checked? (INFO level only)
+    if #playerIds == 0 then
+        Logger.warn(string.format(
+            "[WHITELIST] ⚠️ Keine Identifiers für Spieler %s (%s) IP=%s gefunden! " ..
+            "Prüfe ob Steam aktiv ist. / No identifiers found for player! Check Steam is active.",
+            name, tostring(src), ip
+        ))
+    else
+        Logger.debug(string.format(
+            "[WHITELIST] Prüfe %d IDs für %s (%s): %s",
+            #playerIds, name, tostring(src), table.concat(playerIds, ", ")
+        ))
     end
     -- ══════════════════════════════════════════════════════════════════════
 

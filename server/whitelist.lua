@@ -87,10 +87,11 @@ end
 -- ─────────────────────────────────────────────────────────────────────────────
 
 --- Prüft ob ein Spieler whitelisted ist / Checks if a player is whitelisted
---- @param src number  FiveM source ID
---- @param ip  string  Spieler-IP (ohne Port)
+--- @param src          number    FiveM source ID
+--- @param ip           string    Spieler-IP (ohne Port)
+--- @param preloadedIds table|nil Bereits abgerufene Identifiers (optional, verhindert Doppel-Abruf)
 --- @return boolean, string  (whitelisted, grund/reason)
-function Whitelist.check(src, ip)
+function Whitelist.check(src, ip, preloadedIds)
     -- ── Ebene 1: txAdmin / ACE ────────────────────────────────────────────────
     -- Funktioniert mit txAdmin "Permissions" und server.cfg ACE-Regeln
     -- Works with txAdmin "Permissions" and server.cfg ACE rules
@@ -99,7 +100,10 @@ function Whitelist.check(src, ip)
     end
 
     -- ── Ebene 2 & 3: Identifier-Checks ───────────────────────────────────────
-    local playerIds = GetPlayerIdentifiers(src) or {}
+    -- Verwende vorgeladene Identifiers wenn vorhanden (vermeidet Timing-Probleme)
+    -- Use pre-loaded identifiers if provided (avoids timing issues)
+    local playerIds = (preloadedIds and #preloadedIds > 0) and preloadedIds
+                      or GetPlayerIdentifiers(src) or {}
 
     -- IP-Direkteintrag prüfen / Check direct IP entry
     local ipKey = "ip:" .. (ip or "")
