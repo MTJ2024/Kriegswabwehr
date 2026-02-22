@@ -70,6 +70,7 @@ function switchTab(name) {
     if (name === 'bans')      nuiFetch('getBanList');
     if (name === 'whitelist') nuiFetch('getWhitelist');
     if (name === 'queue')     nuiFetch('getQueue');
+    if (name === 'log')       loadLogDates();
 }
 
 // ── Stats update ──────────────────────────────────────────────────────────────
@@ -505,6 +506,26 @@ window.addEventListener('message', function(event) {
                 showToast('❌ Fehler', (msg.data && msg.data.msg) || 'Fehler', 'error');
             }
             break;
+        case 'logDatesResponse':
+            renderLogDates(msg.data && msg.data.dates);
+            break;
+        case 'logByDateResponse':
+            renderLogEntries(msg.data);
+            break;
+        case 'logRetentionResult':
+            if (msg.data && msg.data.success) {
+                showToast('📋 Verlängert', msg.data.key + ' + ' + msg.data.extraDays + ' Tage', 'success');
+                nuiFetch('getLogDates');
+            } else {
+                showToast('❌ Fehler', 'Verlängerung fehlgeschlagen', 'error');
+            }
+            break;
+        case 'logExportResponse':
+            if (msg.data && msg.data.content) {
+                downloadText('kw_log_' + (msg.data.key || 'export') + '.txt', msg.data.content);
+                showToast('📥 Export', 'Log-Datei wird heruntergeladen', 'success');
+            }
+            break;
         default:
             break;
     }
@@ -534,3 +555,90 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof initCharts === 'function') initCharts();
     if (typeof initMap    === 'function') initMap();
 });
+
+// ── Log file browser ──────────────────────────────────────────────────────────
+
+let _selectedLogKey = null;
+
+function loadLogDates() {
+    nuiFetch('getLogDates');
+}
+
+function renderLogDates(dates) {
+    const list = document.getElementById('log-file-list');
+    if (!list) return;
+    if (!dates || dates.length === 0) {
+        list.innerHTML = '<div class="log-file-empty">Keine gespeicherten Logs / No stored logs</div>';
+        return;
+    }
+    list.innerHTML = dates.map(d => `
+        <div class="log-file-row ${d.locked ? 'log-file-locked' : ''}" onclick="selectLogDate('${d.key}', '${d.date}')">
+            <div class="log-file-info">
+                <span class="log-file-date">${d.date}</span>
+                <span class="log-file-meta">${fmtNum(d.entries)} Einträge · ${fmtSize(d.size)}</span>
+                ${d.locked ? '<span class="log-file-lock">🔒 Verlängert</span>' : ''}
+            </div>
+            <div class="log-file-actions">
+                <button class="btn-log-extend" onclick="extendLog(event,'${d.key}')">+5 Tage</button>
+                <button class="btn-log-export" onclick="exportLog(event,'${d.key}')">📥 Export</button>
+            </div>
+        </div>`).join('');
+}
+
+function selectLogDate(key, label) {
+    _selectedLogKey = key;
+    // Highlight selected
+    document.querySelectorAll('.log-file-row').forEach(r => r.classList.remove('selected'));
+    const row = document.querySelector(`.log-file-row[onclick*="${key}"]`);
+    if (row) row.classList.add('selected');
+    // Load entries
+    nuiFetch('getLogByDate', { key });
+    // Update header
+    const hdr = document.getElementById('log-entries-header');
+    if (hdr) hdr.textContent = '📋 Logs: ' + label;
+}
+
+function renderLogEntries(data) {
+    const tbody = document.getElementById('log-entries-body');
+    if (!tbody) return;
+    const entries = (data && data.entries) ? data.entries : [];
+    if (entries.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" class="td-empty">Keine Einträge / No entries</td></tr>';
+        return;
+    }
+    tbody.innerHTML = entries.slice(-500).reverse().map(e => `<tr>
+        <td class="log-ts">${e.timestamp || '?'}</td>
+        <td><span class="badge log-level-${(e.level||'info').toLowerCase()}">${e.level || '?'}</span></td>
+        <td class="log-msg">${esc(e.message || '')}</td>
+    </tr>`).join('');
+}
+
+function extendLog(event, key) {
+    event.stopPropagation();
+    nuiFetch('extendLogRetention', { key, extraDays: 5 });
+}
+
+function exportLog(event, key) {
+    event.stopPropagation();
+    nuiFetch('exportLog', { key });
+}
+
+function downloadText(filename, content) {
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function fmtSize(bytes) {
+    if (!bytes) return '0 B';
+    if (bytes < 1024)      return bytes + ' B';
+    if (bytes < 1048576)   return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+}
+

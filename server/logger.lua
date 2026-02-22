@@ -194,3 +194,234 @@ function Logger.getBuffer(limit)
 end
 
 Logger.info("Logger initialisiert / Logger initialized")
+
+-- =============================================================================
+-- PERSISTENZ / PERSISTENCE – Logs auf Festplatte / Logs to disk
+-- =============================================================================
+-- Format: data/log_YYYYMMDD.json  (ein File pro Tag / one file per day)
+-- Retention: automatische Löschung nach Config.LogRetentionDays (Standard: 5)
+-- Verlängerung: data/log_YYYYMMDD.lock – Datei schützt vor Löschung
+-- =============================================================================
+
+local RESOURCE = GetCurrentResourceName()
+
+-- Wie viele Tage in der Vergangenheit das Dashboard anzeigt / How many days the dashboard browses back
+local LOG_BROWSE_DAYS = 30
+-- Wie weit zurück beim Cleanup geprüft wird (> LogRetentionDays + mögliche Lock-Verlängerungen)
+-- How far back cleanup checks (> LogRetentionDays + possible lock extensions)
+local LOG_CLEANUP_LOOKBACK = 90
+
+-- Puffer für den aktuellen Tag / Buffer for today
+local diskBuffer   = {}       -- Einträge seit letztem Flush / entries since last flush
+local lastFlushDay = os.date("%Y%m%d")
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Interner Dateiname für ein Datum / Internal filename for a date
+-- ─────────────────────────────────────────────────────────────────────────────
+local function logFile(dateKey)
+    return "data/log_" .. dateKey .. ".json"
+end
+
+local function lockFile(dateKey)
+    return "data/log_" .. dateKey .. ".lock"
+end
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Bestehendes Log laden / Load existing log from disk
+-- ─────────────────────────────────────────────────────────────────────────────
+local function loadFromDisk(dateKey)
+    local raw = LoadResourceFile(RESOURCE, logFile(dateKey))
+    if not raw or raw == "" then return {} end
+    local ok, data = pcall(json.decode, raw)
+    if ok and type(data) == "table" then return data end
+    return {}
+end
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Flush: aktuellen Puffer auf Festplatte schreiben
+-- Flush: write current buffer to disk
+-- ─────────────────────────────────────────────────────────────────────────────
+local function flush()
+    if #diskBuffer == 0 then return end
+
+    local today = os.date("%Y%m%d")
+
+    -- Tag gewechselt: alten Puffer mit gestern zusammenführen und leeren
+    -- Day changed: merge old buffer with yesterday and reset
+    if today ~= lastFlushDay then
+        local old = loadFromDisk(lastFlushDay)
+        for _, e in ipairs(diskBuffer) do table.insert(old, e) end
+        SaveResourceFile(RESOURCE, logFile(lastFlushDay), json.encode(old), -1)
+        diskBuffer   = {}
+        lastFlushDay = today
+        return
+    end
+
+    -- Heute: bestehende Datei laden und ergänzen
+    -- Today: load existing file and append
+    local existing = loadFromDisk(today)
+    for _, e in ipairs(diskBuffer) do table.insert(existing, e) end
+    SaveResourceFile(RESOURCE, logFile(today), json.encode(existing), -1)
+    diskBuffer = {}
+end
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Öffentliche API: Log-Datei für ein Datum laden
+-- Public API: load log file for a date
+-- ─────────────────────────────────────────────────────────────────────────────
+function Logger.getLogByDate(dateKey)
+    flush()  -- sicherstellen dass Puffer geschrieben ist
+    return loadFromDisk(dateKey)
+end
+
+-- Gibt alle verfügbaren Log-Daten zurück (letzte 30 Tage prüfen)
+-- Returns all available log dates (checks last 30 days)
+function Logger.getLogDates()
+    flush()
+    local dates = {}
+    for i = 0, LOG_BROWSE_DAYS - 1 do
+        local ts = os.time() - i * 86400
+        local key = os.date("%Y%m%d", ts)
+        local content = LoadResourceFile(RESOURCE, logFile(key))
+        if content and content ~= "" then
+            local locked  = LoadResourceFile(RESOURCE, lockFile(key)) or ""
+            local entries = 0
+            local ok, parsed = pcall(json.decode, content)
+            if ok and type(parsed) == "table" then entries = #parsed end
+            table.insert(dates, {
+                date      = os.date("%Y-%m-%d", ts),
+                key       = key,
+                entries   = entries,
+                size      = #content,
+                locked    = locked ~= "",
+                lockInfo  = locked ~= "" and locked or nil,
+            })
+        end
+    end
+    return dates
+end
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Verlängerung: Lock-Datei schreiben – verhindert automatische Löschung
+-- Extension: write lock file – prevents automatic deletion
+-- ─────────────────────────────────────────────────────────────────────────────
+function Logger.extendRetention(dateKey, extraDays, adminName)
+    extraDays = extraDays or 5
+    local until_ts  = os.time() + extraDays * 86400
+    local lockData  = string.format(
+        "locked_by=%s until=%s extraDays=%d",
+        adminName or "admin",
+        os.date("%Y-%m-%d %H:%M:%S", until_ts),
+        extraDays
+    )
+    local ok = SaveResourceFile(RESOURCE, lockFile(dateKey), lockData, -1)
+    if ok then
+        Logger.info(string.format(
+            "[LOG] Retention verlängert / Retention extended: %s um %d Tage bis %s",
+            dateKey, extraDays, os.date("%Y-%m-%d", until_ts)
+        ))
+    end
+    return ok
+end
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Export: gibt den Inhalt einer Log-Datei als formatierten Text zurück
+-- Export: returns the content of a log file as formatted text
+-- ─────────────────────────────────────────────────────────────────────────────
+function Logger.exportLog(dateKey)
+    local entries = Logger.getLogByDate(dateKey)
+    if #entries == 0 then return "-- Keine Eintraege / No entries --" end
+    local lines = {
+        string.format("# Kriegswabwehr Log-Export / Log Export"),
+        string.format("# Datum / Date: %s | Eintraege / Entries: %d", dateKey, #entries),
+        string.format("# Exportiert / Exported: %s", os.date("%Y-%m-%d %H:%M:%S")),
+        string.rep("-", 80),
+    }
+    for _, e in ipairs(entries) do
+        table.insert(lines, string.format("[%s] [%-5s] %s",
+            e.timestamp or "?", e.level or "?", e.message or ""))
+    end
+    return table.concat(lines, "\n")
+end
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Auto-Cleanup: Logs älter als Config.LogRetentionDays löschen
+-- Auto-cleanup: delete logs older than Config.LogRetentionDays
+-- ─────────────────────────────────────────────────────────────────────────────
+local function runCleanup()
+    local retDays = (Config and Config.LogRetentionDays) or 5
+    local deleted = 0
+    for i = retDays, LOG_CLEANUP_LOOKBACK do  -- prüfe weit genug zurück / check far enough back
+        local ts  = os.time() - i * 86400
+        local key = os.date("%Y%m%d", ts)
+        local fName = logFile(key)
+        if LoadResourceFile(RESOURCE, fName) then
+            -- Lock prüfen / check lock
+            local lockRaw = LoadResourceFile(RESOURCE, lockFile(key)) or ""
+            local locked  = false
+            if lockRaw ~= "" then
+                -- Prüfe ob Lock noch gültig / check if lock still valid
+                local untilStr = lockRaw:match("until=(%d%d%d%d%-%d%d%-%d%d %d%d:%d%d:%d%d)")
+                if untilStr then
+                    local y,mo,d,h,mi,s = untilStr:match("(%d+)-(%d+)-(%d+) (%d+):(%d+):(%d+)")
+                    local lockUntil = os.time{year=y,month=mo,day=d,hour=h,min=mi,sec=s}
+                    if os.time() < lockUntil then locked = true end
+                end
+            end
+            if not locked then
+                -- Datei löschen durch Überschreiben mit leerem Inhalt
+                -- Delete by overwriting with empty content
+                SaveResourceFile(RESOURCE, fName, "", -1)
+                SaveResourceFile(RESOURCE, lockFile(key), "", -1)
+                deleted = deleted + 1
+            end
+        end
+    end
+    if deleted > 0 then
+        Logger.info(string.format(
+            "[LOG] Auto-Cleanup: %d alte Log-Datei(en) gelöscht (Aufbewahrung: %d Tage)",
+            deleted, retDays
+        ))
+    end
+end
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Alle Logeinträge auch in den Disk-Puffer schreiben
+-- Also write all log entries to the disk buffer
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Originale log-Funktion patchen / Patch original log function
+local _origLog = Logger.log
+function Logger.log(level, message)
+    _origLog(level, message)
+    -- Auch in Disk-Puffer / also to disk buffer
+    table.insert(diskBuffer, {
+        timestamp = os.date("%Y-%m-%d %H:%M:%S"),
+        level     = level,
+        message   = message,
+    })
+end
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Periodischer Flush-Thread und Cleanup-Thread
+-- Periodic flush thread and cleanup thread
+-- ─────────────────────────────────────────────────────────────────────────────
+CreateThread(function()
+    -- Initialer Cleanup beim Start / Initial cleanup on start
+    Wait(3000)
+    runCleanup()
+
+    local flushInterval = (Config and Config.LogFlushInterval or 60) * 1000
+    local cleanupTimer  = 0
+    while true do
+        Wait(flushInterval)
+        flush()
+        cleanupTimer = cleanupTimer + flushInterval
+        -- Stündlicher Cleanup / Hourly cleanup
+        if cleanupTimer >= 3600000 then
+            cleanupTimer = 0
+            runCleanup()
+        end
+    end
+end)
+
+Logger.info("Log-Persistenz aktiv / Log persistence active – Aufbewahrung: " .. ((Config and Config.LogRetentionDays) or 5) .. " Tage")

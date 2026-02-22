@@ -198,15 +198,17 @@
     <div id="tab-log" class="tab-pane hidden">
       <div class="tab-header">
         <div>
-          <h2 class="tab-title">📋 Ladebildschirm-Monitor</h2>
-          <p class="tab-sub">Alle Verbindungsversuche in Echtzeit.</p>
+          <h2 class="tab-title">📋 Ladebildschirm-Monitor &amp; Log-Archiv</h2>
+          <p class="tab-sub">Echtzeit-Ereignisse + persistente Logs (5 Tage Aufbewahrung).</p>
         </div>
         <div class="tab-actions">
           <button class="btn btn-danger" onclick="clearLogTable()">🗑️ Leeren</button>
         </div>
       </div>
 
+      <!-- Live-Ereignisse -->
       <div class="panel">
+        <div class="panel-title">⚡ Live-Ereignisse</div>
         <table class="data-table">
           <thead>
             <tr><th>Zeit</th><th>IP</th><th>Land</th><th>ISP</th><th>Typ</th><th>Status</th></tr>
@@ -215,6 +217,43 @@
             <tr><td colspan="6" class="td-empty">Warte auf Ereignisse…</td></tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Log-Archiv -->
+      <div class="panel" style="margin-top:1.2rem">
+        <div class="panel-title" style="display:flex;justify-content:space-between;align-items:center">
+          <span>🗄️ Log-Archiv (5-Tage Aufbewahrung)</span>
+          <button class="btn btn-secondary" style="font-size:.8rem;padding:.3rem .8rem"
+                  onclick="loadLogDates()">🔄 Aktualisieren</button>
+        </div>
+        <div style="display:grid;grid-template-columns:260px 1fr;gap:1rem;margin-top:.8rem">
+          <!-- Dateiliste / File list -->
+          <div>
+            <div style="font-size:.75rem;color:var(--text-muted);margin-bottom:.5rem">Verfügbare Tage / Available days</div>
+            <div id="log-file-list" style="display:flex;flex-direction:column;gap:.4rem">
+              <div class="log-file-empty">Klicke auf Aktualisieren… / Click refresh…</div>
+            </div>
+          </div>
+          <!-- Einträge / Entries -->
+          <div>
+            <div id="log-entries-header" style="font-size:.75rem;color:var(--text-muted);margin-bottom:.5rem">📋 Wähle einen Tag aus der Liste</div>
+            <div style="max-height:350px;overflow-y:auto">
+              <table class="data-table" style="font-size:.72rem">
+                <thead>
+                  <tr><th style="width:145px">Zeitstempel</th><th style="width:60px">Level</th><th>Nachricht</th></tr>
+                </thead>
+                <tbody id="log-entries-body">
+                  <tr><td colspan="3" class="td-empty">Kein Tag ausgewählt</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:.8rem;font-size:.72rem;color:var(--text-muted)">
+          💡 <strong>+5 Tage</strong> = verlängert Aufbewahrung um 5 Tage &nbsp;|&nbsp;
+          <strong>📥 Export</strong> = lädt Log als .txt &nbsp;|&nbsp;
+          Logs ohne 🔒 werden nach 5 Tagen automatisch gelöscht.
+        </div>
       </div>
     </div>
 

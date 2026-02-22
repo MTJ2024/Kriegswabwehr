@@ -288,17 +288,16 @@ Config.VisualDeterrence = {
 }
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- Honeypot-Modus / Honeypot Mode
+-- Sperrvalidierungs-Protokoll / Block Validation Protocol
 -- ─────────────────────────────────────────────────────────────────────────────
--- Gebannte IPs erhalten KEINE sofortige Ablehnung, sondern werden in einer
--- Fake-Verbindungsschleife gehalten. Sie denken, sie verbinden sich, während
--- alles protokolliert wird.
--- Banned IPs do NOT get an immediate rejection – they are held in a fake
--- connection loop, thinking they are connecting while everything is logged.
+-- Gesperrte IPs erhalten KEINE sofortige Ablehnung, sondern werden einem
+-- erweiterten Verbindungsanalyse-Protokoll unterzogen, während alles geloggt wird.
+-- Banned IPs do NOT get an immediate rejection – they go through an extended
+-- connection analysis protocol while everything is logged.
 Config.Honeypot = {
     -- Aktivieren / Enable
     enabled = true,
-    -- Dauer der Honeypot-Täuschung in ms / Honeypot illusion duration in ms
+    -- Dauer des Analyse-Protokolls in ms / Duration of the analysis protocol in ms
     durationMs = 30000,   -- 30 Sekunden / seconds
     -- Nur für permanente Sperren / Only for permanent bans
     permBanOnly = false,
@@ -355,3 +354,17 @@ Config.WhitelistQueue = {
     -- Admin can override this per request in the dashboard.
     permanentByDefault = false,
 }
+
+-- =============================================================================
+-- 📋 LOG-PERSISTENZ / LOG PERSISTENCE
+-- =============================================================================
+-- Alle Server-Logs werden auf der Festplatte gespeichert und nach
+-- Config.LogRetentionDays automatisch gelöscht (Standard: 5 Tage).
+-- Admins können einzelne Log-Dateien im Dashboard verlängern oder exportieren.
+--
+-- All server logs are stored on disk and automatically deleted after
+-- Config.LogRetentionDays (default: 5 days).
+-- Admins can extend or export individual log files in the dashboard.
+-- =============================================================================
+Config.LogRetentionDays = 5       -- Tage bis Logs automatisch gelöscht werden
+Config.LogFlushInterval = 60      -- Sekunden zwischen Disk-Schreibvorgängen

@@ -690,3 +690,75 @@ canvas { display: block; padding: 12px; width: 100% !important; }
   font-weight: bold;
 }
 .btn-remove:hover { background: rgba(255,59,48,.25); }
+
+/* ── Log-Browser ─────────────────────────────────────────────────────────────── */
+
+.log-file-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: .45rem .7rem;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  gap: .5rem;
+}
+.log-file-row:hover    { border-color: var(--accent); background: rgba(10,132,255,.08); }
+.log-file-row.selected { border-color: var(--accent); background: rgba(10,132,255,.14); }
+.log-file-row.log-file-locked { border-color: #30d158; }
+
+.log-file-info  { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
+.log-file-date  { font-size: .82rem; font-weight: 700; color: var(--text); }
+.log-file-meta  { font-size: .7rem; color: var(--text-muted); }
+.log-file-lock  { font-size: .68rem; color: #30d158; }
+
+.log-file-actions { display: flex; gap: .3rem; flex-shrink: 0; }
+
+.btn-log-extend {
+  background: rgba(48,209,88,.15);
+  border: 1px solid #30d158;
+  color: #30d158;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: bold;
+  font-family: var(--font);
+  white-space: nowrap;
+}
+.btn-log-extend:hover { background: rgba(48,209,88,.3); }
+
+.btn-log-export {
+  background: rgba(10,132,255,.15);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: bold;
+  font-family: var(--font);
+  white-space: nowrap;
+}
+.btn-log-export:hover { background: rgba(10,132,255,.3); }
+
+.log-file-empty { font-size: .75rem; color: var(--text-muted); padding: .5rem 0; }
+
+.log-ts  { color: var(--text-muted); font-size: .7rem; white-space: nowrap; }
+.log-msg { font-size: .72rem; color: var(--text); word-break: break-word; }
+
+.log-level-debug { background: rgba(100,100,100,.3); color: #aaa; }
+.log-level-info  { background: rgba(10,132,255,.2);  color: var(--accent); }
+.log-level-warn  { background: rgba(255,214,10,.2);  color: var(--yellow); }
+.log-level-error { background: rgba(255,59,48,.2);   color: var(--red); }
+
+.panel-title {
+  font-size: .8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: .5rem;
+}

@@ -877,8 +877,60 @@ RegisterCommand("kwdashboard", function(src, args, raw)
     TriggerClientEvent("kriegswabwehr:openDashboard", src)
 end, false)
 
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Log-Persistenz-API fuer Dashboard / Log persistence API for dashboard
+-- ─────────────────────────────────────────────────────────────────────────────
+
+RegisterNetEvent("kriegswabwehr:getLogDates", function()
+    local src = source
+    if not AntiTheft.isAdmin(src) then return end
+    TriggerClientEvent("kriegswabwehr:logDatesResponse", src, {
+        dates = Logger.getLogDates()
+    })
+end)
+
+RegisterNetEvent("kriegswabwehr:getLogByDate", function(data)
+    local src = source
+    if not AntiTheft.isAdmin(src) then return end
+    local dateKey = data and data.key
+    if not dateKey or not dateKey:match("^%d%d%d%d%d%d%d%d$") then return end
+    TriggerClientEvent("kriegswabwehr:logByDateResponse", src, {
+        key     = dateKey,
+        entries = Logger.getLogByDate(dateKey),
+    })
+end)
+
+RegisterNetEvent("kriegswabwehr:extendLogRetention", function(data)
+    local src = source
+    if not AntiTheft.isAdmin(src) then return end
+    local dateKey   = data and data.key
+    local extraDays = (data and data.extraDays) or 5
+    if not dateKey or not dateKey:match("^%d%d%d%d%d%d%d%d$") then return end
+    extraDays = math.max(1, math.min(365, tonumber(extraDays) or 5))
+    local adminName = GetPlayerName(src) or tostring(src)
+    local ok = Logger.extendRetention(dateKey, extraDays, adminName)
+    Logger.adminAction(src, "EXTEND_LOG", dateKey, extraDays .. " extra Tage / extra days")
+    TriggerClientEvent("kriegswabwehr:logRetentionResult", src, {
+        success   = ok,
+        key       = dateKey,
+        extraDays = extraDays,
+    })
+end)
+
+RegisterNetEvent("kriegswabwehr:exportLog", function(data)
+    local src = source
+    if not AntiTheft.isAdmin(src) then return end
+    local dateKey = data and data.key
+    if not dateKey or not dateKey:match("^%d%d%d%d%d%d%d%d$") then return end
+    Logger.adminAction(src, "EXPORT_LOG", dateKey, "Log-Export angefordert / Log export requested")
+    TriggerClientEvent("kriegswabwehr:logExportResponse", src, {
+        key     = dateKey,
+        content = Logger.exportLog(dateKey),
+    })
+end)
+
 Logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 Logger.info("  🛡️  KRIEGSWABWEHR – Ladebildschirm-Festung aktiv      ")
-Logger.info("  🕸️  Tarpit    | 👁️  Visual Deterrence | 📨 ISP Report  ")
-Logger.info("  🍯  Honeypot  | 🌍  Geo-Block         | 🔒 Rate Limit  ")
+Logger.info("  🌐  Verbindungsanalyse | 👁️  Visual Deterrence | 📨 ISP")
+Logger.info("  🔒  Sperrprotokoll  | 🌍  Geo-Block  | 📋  Log 5 Tage  ")
 Logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")

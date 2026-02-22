@@ -133,6 +133,46 @@ RegisterNetEvent("kriegswabwehr:whitelistActionResult", function(data)
 end)
 
 -- ─────────────────────────────────────────────────────────────────────────────
+-- Log-Persistenz NUI-Callbacks / Log persistence NUI callbacks
+-- ─────────────────────────────────────────────────────────────────────────────
+
+RegisterNUICallback("getLogDates", function(data, cb)
+    TriggerServerEvent("kriegswabwehr:getLogDates")
+    cb({})
+end)
+
+RegisterNUICallback("getLogByDate", function(data, cb)
+    TriggerServerEvent("kriegswabwehr:getLogByDate", data)
+    cb({})
+end)
+
+RegisterNUICallback("extendLogRetention", function(data, cb)
+    TriggerServerEvent("kriegswabwehr:extendLogRetention", data)
+    cb({})
+end)
+
+RegisterNUICallback("exportLog", function(data, cb)
+    TriggerServerEvent("kriegswabwehr:exportLog", data)
+    cb({})
+end)
+
+RegisterNetEvent("kriegswabwehr:logDatesResponse", function(data)
+    SendNUIMessage({ type = "logDatesResponse", data = data })
+end)
+
+RegisterNetEvent("kriegswabwehr:logByDateResponse", function(data)
+    SendNUIMessage({ type = "logByDateResponse", data = data })
+end)
+
+RegisterNetEvent("kriegswabwehr:logRetentionResult", function(data)
+    SendNUIMessage({ type = "logRetentionResult", data = data })
+end)
+
+RegisterNetEvent("kriegswabwehr:logExportResponse", function(data)
+    SendNUIMessage({ type = "logExportResponse", data = data })
+end)
+
+-- ─────────────────────────────────────────────────────────────────────────────
 -- Periodische Aktualisierung alle 3 Sekunden wenn Dashboard offen
 -- Periodic update every 3 seconds while dashboard is open
 -- ─────────────────────────────────────────────────────────────────────────────
