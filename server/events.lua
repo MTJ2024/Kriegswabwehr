@@ -24,8 +24,8 @@ local eventBlocked = {}
 -- Verarbeitet einen Event-Verstoß und eskaliert wenn nötig
 -- Processes an event violation and escalates if needed
 local function handleEventViolation(source, eventName)
-    -- Sicherheitsguard: kein echter Spieler → ignorieren
-    -- Safety guard: not a real player → ignore
+    -- Sicherheitsguard: kein echter Spieler -> ignorieren
+    -- Safety guard: not a real player -> ignore
     local rawIP = GetPlayerEndpoint(source) or ""
     local ip    = rawIP:match("^([^:]+)") or rawIP
     if ip == "" or not GetPlayerName(source) then return end

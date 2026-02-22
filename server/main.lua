@@ -237,7 +237,7 @@ local function buildDeterrenceCard(ip, geoData, refID, banType, violations)
     -- Referenz-Zeile / Reference line
     local refLine = refID and ("🔖  " .. refID) or ""
 
-    -- ── Adaptive Card (Lua-Tabelle → JSON) ───────────────────────────────────
+    -- ── Adaptive Card (Lua-Tabelle -> JSON) ───────────────────────────────────
     local card = {
         ["$schema"] = "http://adaptivecards.io/schemas/adaptive-card.json",
         type        = "AdaptiveCard",
@@ -470,14 +470,14 @@ end
 -- This is the exact point where ~99% of all attacks happen.
 --
 -- Ablauf / Flow:
---   1. Sofort defer()  → wir kontrollieren den Ladebildschirm
---   2. IP-Sperre       → Honeypot oder sofortige Ablehnung
---   3. ID-Sperre       → Identifier-Ban
---   4. Steam-Token     → kein Token = Bot-Merkmal
---   5. Simultane Limit → zu viele parallele Verbindungen von dieser IP
---   6. Rate-Limit      → zu schnelle Verbindungsversuche
---   7. Geo-IP          → Land/VPN/Proxy prüfen
---   ✓  Erlaubt         → Spieler darf joinen
+--   1. Sofort defer()  -> wir kontrollieren den Ladebildschirm
+--   2. IP-Sperre       -> Honeypot oder sofortige Ablehnung
+--   3. ID-Sperre       -> Identifier-Ban
+--   4. Steam-Token     -> kein Token = Bot-Merkmal
+--   5. Simultane Limit -> zu viele parallele Verbindungen von dieser IP
+--   6. Rate-Limit      -> zu schnelle Verbindungsversuche
+--   7. Geo-IP          -> Land/VPN/Proxy prüfen
+--   ✓  Erlaubt         -> Spieler darf joinen
 -- ─────────────────────────────────────────────────────────────────────────────
 
 AddEventHandler("playerConnecting", function(name, setKickReason, deferrals)

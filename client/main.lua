@@ -25,7 +25,7 @@ RegisterNetEvent("kriegswabwehr:openDashboard", function()
 end)
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- Server-Daten → NUI / Forward server data to NUI
+-- Server-Daten -> NUI / Forward server data to NUI
 -- ─────────────────────────────────────────────────────────────────────────────
 
 RegisterNetEvent("kriegswabwehr:statsResponse", function(data)
@@ -41,7 +41,7 @@ RegisterNetEvent("kriegswabwehr:unbanResult", function(data)
 end)
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- NUI → Server / Forward NUI callbacks to server
+-- NUI -> Server / Forward NUI callbacks to server
 -- ─────────────────────────────────────────────────────────────────────────────
 
 RegisterNUICallback("close", function(data, cb)

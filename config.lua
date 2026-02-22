@@ -84,10 +84,10 @@ Config.BlockProxy = false
 -- Steam/License IDs of admins
 -- ──────────────────────────────────────────────────────────────────────────────
 -- 🔑 WIE FINDEST DU DEINE ID? / HOW TO FIND YOUR ID?
---    Methode 1 – txAdmin:  Players → dein Name → Identifiers
+--    Methode 1 – txAdmin:  Players -> dein Name -> Identifiers
 --    Methode 2 – Konsole:  In server-seitigem Skript:
 --                          print(table.concat(GetPlayerIdentifiers(source), ", "))
---    Methode 3 – Steam:    steamid.io → deine Steam-URL → "steam:HEX"
+--    Methode 3 – Steam:    steamid.io -> deine Steam-URL -> "steam:HEX"
 -- ──────────────────────────────────────────────────────────────────────────────
 Config.AdminIdentifiers = {
     -- "steam:110000100000001",
@@ -106,7 +106,7 @@ Config.Whitelist = {
     -- "steam:110000100000001",
     -- "license:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
     -- "discord:123456789012345678",
-    -- "ip:1.2.3.4",   ← IP direkt whitelisten / whitelist IP directly
+    -- "ip:1.2.3.4",   -- IP direkt whitelisten / whitelist IP directly
 }
 
 -- Admin-Dashboard-Freigabe über NUI / Admin dashboard via NUI

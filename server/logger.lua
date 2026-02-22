@@ -163,7 +163,7 @@ function Logger.adminAction(adminId, action, target, details)
     local adminIp   = GetPlayerEndpoint(adminId) or "?"
 
     Logger.info(string.format(
-        "[ADMIN] %s (%s) IP=%s → %s auf %s | %s",
+        "[ADMIN] %s (%s) IP=%s -> %s auf %s | %s",
         adminName, adminId, adminIp, action, tostring(target), details or ""
     ))
 

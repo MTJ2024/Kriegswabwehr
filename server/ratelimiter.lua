@@ -38,7 +38,7 @@ local dbQueryCounters = {}
 -- Extrahiert das /24-Subnetz aus einer IP-Adresse
 -- Extracts the /24 subnet from an IP address
 local function getSubnet(ip)
-    -- IPv4: "1.2.3.4:port" oder "1.2.3.4" → "1.2.3"
+    -- IPv4: "1.2.3.4:port" oder "1.2.3.4" -> "1.2.3"
     local stripped = ip:match("^(%d+%.%d+%.%d+)%.%d+") or ip:match("^(%d+%.%d+%.%d+)%.%d+:%d+$")
     if not stripped then
         -- Entferne Port falls vorhanden / Remove port if present

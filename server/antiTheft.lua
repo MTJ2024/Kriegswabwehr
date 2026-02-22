@@ -189,8 +189,8 @@ local protectedEvents = {
     "esx_vehicleshop:buyVehicle",
 }
 
--- Baut eine Whitelist für erlaubte Client→Server-Ereignisse
--- Builds a whitelist for allowed client→server events
+-- Baut eine Whitelist für erlaubte Client->Server-Ereignisse
+-- Builds a whitelist for allowed client->server events
 local eventWhitelist = {}
 
 function AntiTheft.registerAllowedEvent(eventName)
